@@ -1,35 +1,66 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { Header } from './components/Header';
+import { Feed } from './components/Feed';
+import { Workspace } from './components/Workspace';
+import { Profile } from './components/Profile';
+import { CreatePostModal } from './components/CreatePostModal';
+import { Login } from './components/Login';
+import { Signup } from './components/Signup';
 
-function App() {
-  const [count, setCount] = useState(0)
+type View = 'login' | 'signup' | 'app';
 
+export default function App() {
+  const [currentView, setCurrentView] = useState<View>('login');
+  const [activeTab, setActiveTab] = useState<'feed' | 'workspace' | 'profile'>('feed');
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<number | null>(null);
+
+  const handleJoinWorkspace = (postId: number) => {
+    setSelectedPost(postId);
+    setActiveTab('workspace');
+  };
+
+  const handleLogin = () => {
+    setCurrentView('app');
+  };
+
+  const handleSignup = () => {
+    setCurrentView('app');
+  };
+
+  // Show login or signup view
+  if (currentView === 'login') {
+    return <Login onLogin={handleLogin} onSignupClick={() => setCurrentView('signup')} />;
+  }
+
+  if (currentView === 'signup') {
+    return <Signup onSignup={handleSignup} onLoginClick={() => setCurrentView('login')} />;
+  }
+
+  // Show main app
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="min-h-screen bg-gray-50">
+      <Header 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        onCreatePost={() => setShowCreatePost(true)}
+      />
+      
+      <main>
+        {activeTab === 'feed' && (
+          <Feed onJoinWorkspace={handleJoinWorkspace} />
+        )}
+        {activeTab === 'workspace' && (
+          <Workspace postId={selectedPost} />
+        )}
+        {activeTab === 'profile' && (
+          <Profile />
+        )}
+      </main>
 
-export default App
+      {showCreatePost && (
+        <CreatePostModal onClose={() => setShowCreatePost(false)} />
+      )}
+    </div>
+  );
+}
