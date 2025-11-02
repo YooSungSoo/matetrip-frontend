@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { Header } from './components/Header';
 import { MainPage } from './components/MainPage';
 import { SearchResults } from './components/SearchResults';
@@ -10,133 +11,236 @@ import { EditPostModal } from './components/EditPostModal';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
 import { ReviewPage } from './components/ReviewPage';
+import { NotFound } from './components/NotFound';
 
-type View =
-  | 'main'
-  | 'search'
-  | 'postDetail'
-  | 'workspace'
-  | 'profile'
-  | 'review'
-  | 'login'
-  | 'signup';
+// Layout component for pages with Header
+function Layout({
+  isLoggedIn,
+  onLoginClick,
+  onLogoutClick,
+  onProfileClick,
+  onCreatePost,
+  onLogoClick
+}: {
+  isLoggedIn: boolean;
+  onLoginClick: () => void;
+  onLogoutClick: () => void;
+  onProfileClick: () => void;
+  onCreatePost: () => void;
+  onLogoClick: () => void;
+}) {
+  return (
+    <>
+      <Header
+        isLoggedIn={isLoggedIn}
+        onLoginClick={onLoginClick}
+        onLogoutClick={onLogoutClick}
+        onProfileClick={onProfileClick}
+        onCreatePost={onCreatePost}
+        onLogoClick={onLogoClick}
+      />
+      <Outlet />
+    </>
+  );
+}
+
+// Wrapper components for route handling
+function MainPageWrapper() {
+  const navigate = useNavigate();
+
+  const handleSearch = (params: { date?: string; location?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params.date) searchParams.set('date', params.date);
+    if (params.location) searchParams.set('location', params.location);
+    navigate(`/search?${searchParams.toString()}`);
+  };
+
+  const handleViewPost = (postId: number) => {
+    navigate(`/post/${postId}`);
+  };
+
+  return <MainPage onSearch={handleSearch} onViewPost={handleViewPost} />;
+}
+
+function SearchResultsWrapper() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+
+  const params = {
+    date: searchParams.get('date') || undefined,
+    location: searchParams.get('location') || undefined,
+  };
+
+  const handleViewPost = (postId: number) => {
+    navigate(`/post/${postId}`);
+  };
+
+  return <SearchResults searchParams={params} onViewPost={handleViewPost} />;
+}
+
+function PostDetailWrapper({
+  isLoggedIn,
+  onEditPost
+}: {
+  isLoggedIn: boolean;
+  onEditPost: (postId: number) => void;
+}) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const postId = parseInt(location.pathname.split('/').pop() || '0');
+
+  const handleJoinWorkspace = (postId: number) => {
+    navigate(`/workspace/${postId}`);
+  };
+
+  const handleEditPost = () => {
+    onEditPost(postId);
+  };
+
+  return (
+    <PostDetail
+      postId={postId}
+      isLoggedIn={isLoggedIn}
+      onJoinWorkspace={handleJoinWorkspace}
+      onEditPost={handleEditPost}
+    />
+  );
+}
+
+function WorkspaceWrapper() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const postId = parseInt(location.pathname.split('/').pop() || '0');
+
+  const handleEndTrip = () => {
+    navigate('/review');
+  };
+
+  return <Workspace postId={postId} onEndTrip={handleEndTrip} />;
+}
+
+function ProfileWrapper({
+  isLoggedIn
+}: {
+  isLoggedIn: boolean;
+}) {
+  const navigate = useNavigate();
+
+  const handleViewPost = (postId: number) => {
+    navigate(`/post/${postId}`);
+  };
+
+  return <Profile isLoggedIn={isLoggedIn} onViewPost={handleViewPost} />;
+}
+
+function LoginWrapper({ onLogin }: { onLogin: () => void }) {
+  const navigate = useNavigate();
+
+  const handleSignupClick = () => {
+    navigate('/signup');
+  };
+
+  return <Login onLogin={onLogin} onSignupClick={handleSignupClick} />;
+}
+
+function SignupWrapper({ onSignup }: { onSignup: () => void }) {
+  const navigate = useNavigate();
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
+  return <Signup onSignup={onSignup} onLoginClick={handleLoginClick} />;
+}
+
+function ReviewPageWrapper() {
+  const navigate = useNavigate();
+
+  const handleComplete = () => {
+    navigate('/');
+  };
+
+  return <ReviewPage onComplete={handleComplete} />;
+}
 
 export default function App() {
-  // 현재 랜더링할 페이지
-  const [currentView, setCurrentView] = useState<View>('main');
+  const navigate = useNavigate();
+
   // 유저의 로그인 상태
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  //모달
+
+  // 모달 상태
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showEditPost, setShowEditPost] = useState(false);
-
-  // Navigation states
-  const [selectedPost, setSelectedPost] = useState<number | null>(null);
-  const [searchParams, setSearchParams] = useState<{
-    date?: string;
-    location?: string;
-  } | null>(null);
+  const [selectedPostForEdit, setSelectedPostForEdit] = useState<number | null>(null);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    setCurrentView('main');
+    navigate('/');
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setCurrentView('main');
+    navigate('/');
   };
 
-  const handleSearch = (params: { date?: string; location?: string }) => {
-    setSearchParams(params);
-    setCurrentView('search');
+  const handleProfileClick = () => {
+    navigate('/profile');
   };
 
-  const handleViewPost = (postId: number) => {
-    setSelectedPost(postId);
-    setCurrentView('postDetail');
-  };
-
-  const handleJoinWorkspace = (postId: number) => {
-    setSelectedPost(postId);
-    setCurrentView('workspace');
-  };
-
-  const handleViewProfile = (userId?: number) => {
-    setCurrentView('profile');
-  };
-
-  const handleStartReview = () => {
-    setCurrentView('review');
-  };
-
-  const handleReviewComplete = () => {
-    setCurrentView('main');
+  const handleLogoClick = () => {
+    navigate('/');
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - 로그인/회원가입 페이지에서는 숨김 */}
-      {currentView !== 'login' && currentView !== 'signup' && (
-        <Header
-          isLoggedIn={isLoggedIn}
-          onLoginClick={() => setCurrentView('login')}
-          onLogoutClick={handleLogout}
-          onProfileClick={handleViewProfile}
-          onCreatePost={() => setShowCreatePost(true)}
-          onLogoClick={() => setCurrentView('main')}
-        />
-      )}
+      <Routes>
+        {/* Routes without Header */}
+        <Route path="/login" element={<LoginWrapper onLogin={handleLogin} />} />
+        <Route path="/signup" element={<SignupWrapper onSignup={handleLogin} />} />
 
-      <main>
-        {currentView === 'login' && (
-          <Login
-            onLogin={handleLogin}
-            onSignupClick={() => setCurrentView('signup')}
+        {/* Routes with Header */}
+        <Route
+          element={
+            <Layout
+              isLoggedIn={isLoggedIn}
+              onLoginClick={() => navigate('/login')}
+              onLogoutClick={handleLogout}
+              onProfileClick={handleProfileClick}
+              onCreatePost={() => setShowCreatePost(true)}
+              onLogoClick={handleLogoClick}
+            />
+          }
+        >
+          <Route path="/" element={<MainPageWrapper />} />
+          <Route path="/search" element={<SearchResultsWrapper />} />
+          <Route
+            path="/post/:id"
+            element={
+              <PostDetailWrapper
+                isLoggedIn={isLoggedIn}
+                onEditPost={(postId) => {
+                  setSelectedPostForEdit(postId);
+                  setShowEditPost(true);
+                }}
+              />
+            }
           />
-        )}
-        {currentView === 'signup' && (
-          <Signup
-            onSignup={handleLogin}
-            onLoginClick={() => setCurrentView('login')}
-          />
-        )}
-        {currentView === 'main' && (
-          <MainPage onSearch={handleSearch} onViewPost={handleViewPost} />
-        )}
-        {currentView === 'search' && searchParams && (
-          <SearchResults
-            searchParams={searchParams}
-            onViewPost={handleViewPost}
-          />
-        )}
-        {currentView === 'postDetail' && selectedPost && (
-          <PostDetail
-            postId={selectedPost}
-            isLoggedIn={isLoggedIn}
-            onJoinWorkspace={handleJoinWorkspace}
-            onEditPost={() => setShowEditPost(true)}
-          />
-        )}
-        {currentView === 'workspace' && selectedPost && (
-          <Workspace postId={selectedPost} onEndTrip={handleStartReview} />
-        )}
-        {currentView === 'profile' && (
-          <Profile isLoggedIn={isLoggedIn} onViewPost={handleViewPost} />
-        )}
-        {currentView === 'review' && (
-          <ReviewPage onComplete={handleReviewComplete} />
-        )}
-      </main>
+          <Route path="/workspace/:id" element={<WorkspaceWrapper />} />
+          <Route path="/profile" element={<ProfileWrapper isLoggedIn={isLoggedIn} />} />
+          <Route path="/review" element={<ReviewPageWrapper />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
 
       {/* Modals */}
       {showCreatePost && (
         <CreatePostModal onClose={() => setShowCreatePost(false)} />
       )}
-
-      {showEditPost && selectedPost && (
+      {showEditPost && (
         <EditPostModal
-          postId={selectedPost}
+          postId={selectedPostForEdit || 0}
           onClose={() => setShowEditPost(false)}
         />
       )}

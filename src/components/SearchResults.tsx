@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, SlidersHorizontal, TrendingUp } from 'lucide-react';
+import { ArrowLeft, SlidersHorizontal, TrendingUp, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { PostCard } from './PostCard';

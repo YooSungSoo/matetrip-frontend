@@ -346,7 +346,7 @@ export function PostDetail({
               </>
             )}
 
-            {isAuthor && (
+            {/* {isAuthor && (
               <Button
                 onClick={() => onJoinWorkspace(postId)}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
@@ -356,6 +356,18 @@ export function PostDetail({
             )}
 
             {!isLoggedIn && (
+              <Button disabled className="w-full">
+                로그인 후 신청 가능
+              </Button>
+            )} */}
+            {isLoggedIn ? (
+              <Button
+                onClick={() => onJoinWorkspace(postId)}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                워크스페이스 입장
+              </Button>
+            ) : (
               <Button disabled className="w-full">
                 로그인 후 신청 가능
               </Button>

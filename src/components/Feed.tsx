@@ -68,7 +68,7 @@ const MOCK_POSTS = [
     participants: 4,
     maxParticipants: 4,
     keywords: ['카페', '쇼핑', '핫플'],
-    status: '완료' as const,
+    status: '모집완료' as const,
     description: '성수동, 연남동 등 서울의 핫플레이스를 함께 다녀왔습니다',
   },
 ];
