@@ -87,7 +87,8 @@ export function MainPage({ onSearch, onViewPost, onUserClick }: MainPageProps) {
   const [searchDate, setSearchDate] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
 
-  const handleSearch = () => {
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
     onSearch({ date: searchDate, location: searchLocation });
   };
 
@@ -97,34 +98,36 @@ export function MainPage({ onSearch, onViewPost, onUserClick }: MainPageProps) {
       <div className="text-center mb-12">
         {/* Search Box */}
         <Card className="max-w-3xl mx-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="date"
-                placeholder="여행 일정"
-                value={searchDate}
-                onChange={(e) => setSearchDate(e.target.value)}
-                className="pl-10"
-              />
+          <form onSubmit={handleSearch}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  type="date"
+                  aria-label="여행 일정"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  aria-label="여행지"
+                  value={searchLocation}
+                  onChange={(e) => setSearchLocation(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 gap-2"
+              >
+                <Search className="w-4 h-4" />
+                검색
+              </Button>
             </div>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                placeholder="여행지를 입력하세요"
-                value={searchLocation}
-                onChange={(e) => setSearchLocation(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button
-              onClick={handleSearch}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 gap-2"
-            >
-              <Search className="w-4 h-4" />
-              검색
-            </Button>
-          </div>
+          </form>
         </Card>
       </div>
 
@@ -142,7 +145,9 @@ export function MainPage({ onSearch, onViewPost, onUserClick }: MainPageProps) {
             <Card
               key={user.id}
               className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => {onUserClick(user.id);}}
+              onClick={() => {
+                onUserClick(user.id);
+              }}
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full" />
