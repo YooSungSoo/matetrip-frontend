@@ -15,7 +15,7 @@ import { ChatPanel } from './ChatPanel';
 import { PlanPanel } from './PlanPanel';
 
 interface WorkspaceProps {
-  postId: number;
+  postId: string;
   onEndTrip: () => void;
 }
 

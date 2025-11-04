@@ -5,6 +5,8 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { useAuthStore } from '../store/authStore';
+import client from '../api/client';
 
 interface CreatePostModalProps {
   onClose: () => void;
@@ -32,25 +34,14 @@ const KEYWORD_OPTIONS = [
  * @param postData 게시글 데이터
  */
 async function createPost(postData: PostData) {
-  const response = await fetch('http://localhost:3000/post', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(postData),
-  });
-
-  if (!response.ok) {
-    // 서버에서 구체적인 에러 메시지를 보냈을 경우를 대비
-    const errorData = await response.json().catch(() => null);
-    const errorMessage = errorData?.message || '게시글 작성에 실패했습니다.';
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
+  // HttpOnly 쿠키 인증을 위해 기존 fetch 대신 client(axios instance)를 사용합니다.
+  // withCredentials: true 설정 덕분에 쿠키가 자동으로 요청에 포함됩니다.
+  const response = await client.post('/post', postData);
+  return response.data;
 }
 
 export function CreatePostModal({ onClose }: CreatePostModalProps) {
+  const { user } = useAuthStore(); // Zustand 스토어에서 사용자 정보를 가져옵니다.
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -72,6 +63,12 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      alert('로그인이 필요합니다. 다시 로그인해주세요.');
+      // 필요하다면 로그인 페이지로 리디렉션할 수 있습니다.
+      return;
+    }
 
     if (
       formData.startDate &&

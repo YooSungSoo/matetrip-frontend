@@ -3,15 +3,17 @@ import { ArrowLeft, SlidersHorizontal, TrendingUp, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { PostCard } from './PostCard';
+import client from '../api/client';
+import { type Post } from '../types/post';
 
 interface SearchResultsProps {
   searchParams: {
     startDate?: string;
-    endDate?:string;
+    endDate?: string;
     location?: string;
     title?: string;
   };
-  onViewPost: (postId: number) => void;
+  onViewPost: (postId: string) => void;
 }
 
 const MOCK_SEARCH_RESULTS = [
@@ -69,8 +71,7 @@ export function SearchResults({
   searchParams,
   onViewPost,
 }: SearchResultsProps) {
-  // TODO: API 응답 타입에 맞게 Post 타입 정의 필요
-  const [results, setResults] = useState<typeof MOCK_SEARCH_RESULTS>([]);
+  const [results, setResults] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [sortBy, setSortBy] = useState<'match' | 'latest'>('match');
@@ -80,7 +81,6 @@ export function SearchResults({
       setIsLoading(true);
       setError(null);
       try {
-        // TODO: 실제 API 엔드포인트와 쿼리 파라미터로 교체해야 합니다.
         const filteredParams = Object.entries(searchParams).reduce(
           (acc, [key, value]) => {
             if (value) acc[key] = value;
@@ -89,14 +89,15 @@ export function SearchResults({
           {} as Record<string, string>
         );
         const query = new URLSearchParams(filteredParams).toString();
-        console.log(`Fetching... /api/posts/search?${query}`);
+        const endpoint = query ? `/post/search?${query}` : '/post';
+        const response = await client.get<Post[]>(endpoint);
 
-        // API 호출 시뮬레이션
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // MOCK 데이터를 필터링하여 API 응답을 시뮬레이션합니다.
-        // 실제 구현에서는 API가 필터링된 결과를 반환합니다.
-        setResults(MOCK_SEARCH_RESULTS);
+        // TODO: 매칭률순 정렬은 백엔드 API 구현 후 적용 필요
+        const sortedResults = response.data.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setResults(sortedResults);
       } catch (e) {
         setError(e as Error);
       } finally {
@@ -173,15 +174,20 @@ export function SearchResults({
       {!isLoading && !error && results.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {results.map((post) => (
-          <div key={post.id} className="relative">
-            {sortBy === 'match' && (
-              <Badge className="absolute -top-2 -right-2 z-10 bg-purple-600 gap-1">
-                <TrendingUp className="w-3 h-3" />
-                {post.matchRate}% 매칭
-              </Badge>
-            )}
-            <PostCard post={post} onJoin={onViewPost} />
-          </div>
+            <div key={post.id} className="relative">
+              {sortBy === 'match' && post.matchRate && (
+                <Badge className="absolute -top-2 -right-2 z-10 bg-purple-600 gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  {post.matchRate}% 매칭
+                </Badge>
+              )}
+              <PostCard
+                post={post}
+                onClick={() => onViewPost(post.id)}
+                // post.image가 없을 경우 기본 이미지 URL을 전달합니다.
+                image={post.image || 'https://images.unsplash.com/photo-1533106418989-87423dec6922?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmF2ZWx8ZW58MXx8fHwxNzIxNzE2MDMwfDA&ixlib=rb-4.1.0&q=80&w=1080'}
+              />
+            </div>
           ))}
         </div>
       )}

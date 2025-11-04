@@ -4,6 +4,7 @@ import { Badge } from './ui/badge';
 
 interface HeaderProps {
   isLoggedIn: boolean;
+  isAuthLoading: boolean;
   onLoginClick: () => void;
   onLogoutClick: () => void;
   onProfileClick: () => void;
@@ -13,6 +14,7 @@ interface HeaderProps {
 
 export function Header({
   isLoggedIn,
+  isAuthLoading,
   onLoginClick,
   onLogoutClick,
   onProfileClick,
@@ -34,7 +36,13 @@ export function Header({
           </button>
 
           <div className="flex items-center gap-3">
-            {isLoggedIn && (
+            {isAuthLoading ? (
+              // 로딩 중일 때 보여줄 스켈레톤 UI
+              <div className="flex items-center gap-3 animate-pulse">
+                <div className="h-8 w-8 rounded-full bg-gray-200"></div>
+                <div className="h-9 w-24 rounded-md bg-gray-200"></div>
+              </div>
+            ) : isLoggedIn ? (
               <>
                 <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   <Bell className="w-5 h-5" />
@@ -67,9 +75,7 @@ export function Header({
                   <span className="hidden sm:inline">로그아웃</span>
                 </Button>
               </>
-            )}
-
-            {!isLoggedIn && (
+            ) : (
               <Button
                 onClick={onLoginClick}
                 className="gap-2 bg-blue-600 hover:bg-blue-700"

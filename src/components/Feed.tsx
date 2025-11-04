@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 
 interface FeedProps {
-  onJoinWorkspace: (postId: number) => void;
+  onJoinWorkspace: (postId: string) => void;
 }
 
 const MOCK_POSTS = [

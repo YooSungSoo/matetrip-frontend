@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 
 interface EditPostModalProps {
-  postId: number;
+  postId: string;
   onClose: () => void;
 }
 
@@ -44,9 +44,8 @@ export function EditPostModal({ postId, onClose }: EditPostModalProps) {
   // postId는 실제 API 연동 시 사용됩니다. 지금은 MOCK_POST_DATA를 사용합니다.
   console.log(`수정할 게시물 ID: ${postId}`);
 
-  const [formData, setFormData] = useState<Omit<PostData, 'keywords'>>(
-    MOCK_POST_DATA
-  );
+  const [formData, setFormData] =
+    useState<Omit<PostData, 'keywords'>>(MOCK_POST_DATA);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>(
     MOCK_POST_DATA.keywords
   );
