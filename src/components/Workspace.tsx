@@ -8,6 +8,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { DayLayer } from '@/hooks/usePoiSocket';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { MapPanel } from './MapPanel';
@@ -27,6 +28,18 @@ const MOCK_MEMBERS = [
 
 export function Workspace({ postId, onEndTrip }: WorkspaceProps) {
   const [showMembers, setShowMembers] = useState(false);
+  // DayLayers 상태를 최상위 공통 부모인 Workspace 컴포넌트에서 관리합니다.
+  const [dayLayers, setDayLayers] = useState<DayLayer[]>(() => {
+    // 여행 일수만큼 UUID를 생성하여 초기 레이어를 설정합니다.
+    // 이 로직은 Workspace가 렌더링될 때 한 번만 실행됩니다.
+    // !! 중요: 모든 사용자가 동일한 ID를 공유해야 하므로, 시뮬레이션 단계에서는 UUID 대신 고정된 문자열 ID를 사용합니다.
+    const initialDays = 2;
+    return Array.from({ length: initialDays }, (_, i) => ({
+      id: `day-${i + 1}`, // 예: 'day-1', 'day-2'
+      label: `Day ${i + 1}`,
+      color: i % 2 === 0 ? '#FF5733' : '#3357FF',
+    }));
+  });
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -99,7 +112,7 @@ export function Workspace({ postId, onEndTrip }: WorkspaceProps) {
 
           <div className="flex-1 overflow-hidden">
             <TabsContent value="map" className="h-full m-0">
-              <MapPanel />
+              <MapPanel workspaceId={postId} dayLayers={dayLayers} />
             </TabsContent>
 
             <TabsContent value="chat" className="h-full m-0">
@@ -113,7 +126,7 @@ export function Workspace({ postId, onEndTrip }: WorkspaceProps) {
             </TabsContent>
 
             <TabsContent value="plan" className="h-full m-0">
-              <PlanPanel />
+              <PlanPanel dayLayers={dayLayers} />
             </TabsContent>
           </div>
         </Tabs>

@@ -18,7 +18,7 @@ export interface Requester {
 
 export interface Participation {
   id: string;
-  status: '대기중' | '수락' | '거절';
+  status: '대기중' | '승인' | '거절';
   requester: Requester;
   requestedAt: string;
 }

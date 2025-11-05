@@ -7,62 +7,38 @@ import {
   Polyline,
   CustomOverlayMap,
 } from 'react-kakao-maps-sdk';
+import { usePoiSocket, Poi } from '../hooks/usePoiSocket';
 
-type LayerType = 'all' | 'day1' | 'day2';
-
-// 레이어 정보를 동적으로 관리하기 위해 확장 가능한 타입 정의
-type DayLayer = {
-  id: `day${number}`;
+export type DayLayer = {
+  id: string; // UUID
   label: string;
-  color: string; // Polyline 색상을 위한 속성 추가
+  color: string;
 };
 
-// 마커 데이터의 타입을 정의합니다.
-type MarkerType = {
-  lat: number;
-  lng: number;
-  address: string;
-  content: string; // 장소 이름
-  category?: string;
-  // 마커를 고유하게 식별하고, 어떤 레이어에 속하는지 알기 위한 속성 추가
-  id: number;
-  layerId: DayLayer['id'];
-};
-
-export function MapPanel() {
-  // 레이어 정보를 상수가 아닌 상태로 관리하여 동적 확장성을 확보
-  const [dayLayers, setDayLayers] = useState<DayLayer[]>([
-    { id: 'day1', label: 'Day 1', color: '#FF0000' }, // 빨간색
-    { id: 'day2', label: 'Day 2', color: '#0000FF' }, // 파란색
-  ]);
+export function MapPanel({ workspaceId, dayLayers }: { workspaceId: string, dayLayers: DayLayer[] }) {
+  // 2. usePoiSocket 훅을 사용하여 소켓 통신 로직을 가져온다.
+  // 이제 pois 상태는 웹소켓을 통해 서버와 동기화된다.
+  const { pois, markPoi, unmarkPoi } = usePoiSocket(workspaceId);
 
   // '전체' 레이어를 포함한 전체 UI용 레이어 목록
-  const UILayers: { id: LayerType | DayLayer['id']; label: string }[] = [
+  const UILayers: { id: 'all' | DayLayer['id']; label: string }[] = [
     { id: 'all', label: '전체' },
     ...dayLayers,
   ];
 
-  // 레이어별로 마커를 저장하도록 상태 구조 변경
-  const [markersByLayer, setMarkersByLayer] = useState<
-    Record<DayLayer['id'], MarkerType[]>
-  >(() => dayLayers.reduce((acc, layer) => ({ ...acc, [layer.id]: [] }), {}));
-  const [selectedLayer, setSelectedLayer] = useState<LayerType>('all');
-  // 최종 여행 계획(일정)을 저장할 상태
-  const [itinerary, setItinerary] = useState<
-    Record<DayLayer['id'], MarkerType[]>
-  >(() => dayLayers.reduce((acc, layer) => ({ ...acc, [layer.id]: [] }), {}));
+  // 1. selectedLayer의 타입을 DayLayer['id'] 에서 동적으로 추론하도록 변경
+  //    'all' 타입을 포함하여 유연성을 확보합니다.
+  const [selectedLayer, setSelectedLayer] = useState<'all' | string>(
+    'all'
+  );
 
-  const removeMarker = (markerToRemove: MarkerType) => {
-    setMarkersByLayer((prev) => ({
-      ...prev,
-      [markerToRemove.layerId]: prev[markerToRemove.layerId].filter(
-        (marker) => marker.id !== markerToRemove.id
-      ),
-    }));
-  };
+  // 최종 여행 계획(일정)을 저장할 상태
+  const [itinerary, setItinerary] = useState<Record<string, Poi[]>>(
+    () => dayLayers.reduce((acc, layer) => ({ ...acc, [layer.id]: [] }), {})
+  );
 
   // 여행 일정에 장소를 추가하는 함수
-  const addToItinerary = (markerToAdd: MarkerType) => {
+  const addToItinerary = (markerToAdd: Poi) => {
     // 모든 Day를 통틀어 이미 추가된 장소인지 확인
     const isAlreadyAdded = Object.values(itinerary)
       .flat()
@@ -73,106 +49,46 @@ export function MapPanel() {
       return;
     }
 
-    const targetDay = markerToAdd.layerId;
+    const targetDay = markerToAdd.planDayId;
     setItinerary((prev) => {
-      const newItineraryForDay = [...prev[targetDay], markerToAdd];
+      const newItineraryForDay = [...(prev[targetDay] || []), markerToAdd];
       const updatedItinerary = { ...prev, [targetDay]: newItineraryForDay };
 
-      // 콘솔에서 현재까지 추가된 여행 계획을 확인할 수 있습니다.
+      // --- POI Connection 전체 데이터 시뮬레이션 ---
+      const simulatedConnections = newItineraryForDay.map((poi, index, arr) => {
+        // 각 POI를 기준으로 prev와 next를 결정합니다.
+        const prevPoiId = index > 0 ? arr[index - 1].id : null;
+        const nextPoiId = index < arr.length - 1 ? arr[index + 1].id : null;
+
+        return {
+          // 이 객체는 각 POI가 가지는 연결 정보를 나타냅니다.
+          // 실제 테이블에서는 이 관계를 기반으로 레코드가 생성/업데이트됩니다.
+          poi_id: poi.id, // 어떤 POI에 대한 연결 정보인지 명시
+          placeName: poi.placeName, // 이해를 돕기 위해 장소 이름 추가
+          prev_poi_id: prevPoiId,
+          next_poi_id: nextPoiId,
+          plan_day_id: targetDay,
+        };
+      });
+
       console.log(
-        `Day ${targetDay.slice(-1)} 여행 계획에 추가됨:`,
-        markerToAdd
+        `[시뮬레이션] Day ${targetDay.slice(-1)}의 전체 POI_Connection 테이블 데이터:`,
+        simulatedConnections
       );
-      console.log('현재 전체 여행 계획:', updatedItinerary);
+      // -----------------------------------------
+
       return updatedItinerary;
     });
   };
-
-  // EventMarkerContainer의 props 타입을 명확하게 정의합니다.
-  type EventMarkerContainerProps = {
-    marker: MarkerType;
-    index: number;
-    // itinerary에 마커가 포함되어 있는지 여부를 전달받음
-    isAdded: boolean;
-  };
-
-  function EventMarkerContainer({
-    marker,
-    index,
-    isAdded,
-  }: EventMarkerContainerProps) {
-    const [isVisible, setIsVisible] = useState(false);
-    const timerRef = useRef<number | null>(null);
-
-    const handleMouseOver = useCallback(() => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      setIsVisible(true);
-    }, []);
-
-    const handleMouseOut = useCallback(() => {
-      timerRef.current = window.setTimeout(() => {
-        setIsVisible(false);
-      }, 100);
-    }, []);
-
-    return (
-      <MapMarker
-        key={`marker-${marker.id}`}
-        position={{ lat: marker.lat, lng: marker.lng }}
-        onClick={() => removeMarker(marker)}
-        // MapMarker에 직접 onMouseOver와 onMouseOut 이벤트를 다시 적용합니다.
-        onMouseOver={handleMouseOver}
-        onMouseOut={handleMouseOut}
-        // isVisible 상태일 때만 자식(CustomOverlay)을 렌더링합니다.
-      >
-        {/* isVisible이 true일 때만 정보창을 표시합니다. */}
-        {/* yAnchor를 사용해 정보창을 마커 아이콘 위로 올립니다. */}
-        {isVisible && (
-          <div
-            className="bg-white rounded-lg border border-gray-300 shadow-md min-w-[200px] text-black overflow-hidden"
-            onMouseOver={handleMouseOver}
-            onMouseOut={handleMouseOut}
-          >
-            <div className="p-3">
-              <div className="font-bold text-sm mb-1">{marker.content}</div>
-              {marker.category && (
-                <div className="text-xs text-gray-500 mb-1.5">
-                  {marker.category.split(' > ').pop()}
-                </div>
-              )}
-              <div className="text-xs text-gray-600 mb-3">{marker.address}</div>
-              <Button
-                size="xs"
-                className={`w-full h-7 text-xs ${
-                  isAdded
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation(); // 마커의 onClick 이벤트 전파 방지
-                  if (!isAdded) addToItinerary(marker);
-                }}
-                disabled={isAdded}
-              >
-                {isAdded ? '추가됨' : '일정에 추가'}
-              </Button>
-            </div>
-          </div>
-        )}
-      </MapMarker>
-    );
-  }
 
   // MapUI 컴포넌트가 selectedLayer 상태와 상태 변경 함수를 props로 받도록 수정
   function MapUI({
     selectedLayer,
     setSelectedLayer,
   }: {
-    selectedLayer: LayerType;
-    setSelectedLayer: React.Dispatch<React.SetStateAction<LayerType>>;
+    // 2. MapUI 컴포넌트의 props 타입도 동적으로 변경된 타입에 맞게 수정합니다.
+    selectedLayer: 'all' | string;
+    setSelectedLayer: React.Dispatch<React.SetStateAction<'all' | string>>;
   }) {
     return (
       <>
@@ -214,28 +130,35 @@ export function MapPanel() {
 
   // 선택된 레이어에 따라 표시할 마커들을 결정
   const markersToDisplay =
-    selectedLayer === 'all'
-      ? Object.values(markersByLayer).flat()
-      : markersByLayer[selectedLayer] || [];
+    selectedLayer === 'all' // 4. pois 배열을 필터링하여 현재 레이어에 맞는 마커만 표시하기
+      ? pois
+      : pois.filter((p) => p.planDayId === selectedLayer);
 
   // itinerary 데이터를 기반으로 Polyline 경로를 동적으로 생성
   const polylinePaths = dayLayers.reduce(
     (acc, layer) => {
       const path =
-        itinerary[layer.id]?.map((m) => ({ lat: m.lat, lng: m.lng })) || [];
+        itinerary[layer.id]?.map((m) => ({
+          lat: m.latitude,
+          lng: m.longitude,
+        })) || [];
       return { ...acc, [layer.id]: path };
     },
     {} as Record<DayLayer['id'], { lat: number; lng: number }[]>
   );
 
+  // 마커 위에 정보창(infowindow)을 표시하기 위한 상태
+  const [openInfoWindow, setOpenInfoWindow] = useState<string | number | null>(
+    null
+  );
+
   return (
     <div className="h-full relative">
       <Map
-        id="map"
         className="w-full h-full"
         center={{
-          lat: 33.450701,
-          lng: 126.570667,
+          lat: 33.450701, // latitude
+          lng: 126.570667, // longitude
         }}
         level={1}
         onClick={(_t, mouseEvent) => {
@@ -302,20 +225,17 @@ export function MapPanel() {
                     );
                   }
 
-                  const newMarker = {
-                    id: Date.now(), // 고유 ID로 현재 시간 사용
-                    layerId: selectedLayer, // 현재 선택된 레이어 ID 저장
-                    lat: latlng.getLat(),
-                    lng: latlng.getLng(),
+                  // 5. 새 마커 정보를 로컬 상태에 바로 추가하는 대신,
+                  // markPoi 함수를 호출하여 서버에 'mark' 이벤트를 보낸다.
+                  // id는 서버에서 생성되므로, 여기서는 제외한다.
+                  markPoi({
+                    planDayId: selectedLayer, // 현재 선택된 레이어 ID 저장
+                    latitude: latlng.getLat(),
+                    longitude: latlng.getLng(),
                     address: address,
-                    content: placeName, // 마커에 표시될 내용은 장소 이름으로 설정
-                    category: categoryName,
-                  };
-                  // 현재 선택된 레이어의 배열에 새로운 마커 추가
-                  setMarkersByLayer((prev) => ({
-                    ...prev,
-                    [selectedLayer]: [...prev[selectedLayer], newMarker],
-                  }));
+                    placeName: placeName, // 마커에 표시될 내용은 장소 이름으로 설정
+                    // category는 새로운 DTO에 없으므로 제거
+                  });
                 },
                 {
                   location: latlng, // 현재 클릭한 좌표를 중심으로
@@ -328,15 +248,72 @@ export function MapPanel() {
         }}
       >
         {markersToDisplay.map((marker, index) => (
-          <EventMarkerContainer
-            key={`EventMarkerContainer-${marker.id}`}
-            marker={marker}
-            index={index}
-            // 현재 마커가 itinerary에 포함되어 있는지 여부를 prop으로 전달
-            isAdded={Object.values(itinerary)
-              .flat()
-              .some((item) => item.id === marker.id)}
-          />
+          <MapMarker
+            key={`marker-${marker.id}`} // key는 고유해야 합니다.
+            position={{ lat: marker.latitude, lng: marker.longitude }}
+            onMouseOver={() => setOpenInfoWindow(marker.id)}
+            onMouseOut={() => setOpenInfoWindow(null)}
+          >
+            {openInfoWindow === marker.id && (
+              <CustomOverlayMap
+                position={{ lat: marker.latitude, lng: marker.longitude }}
+                yAnchor={1.2} // 마커와 정보창 사이의 간격을 줄여 마우스 이동이 편하도록 조정
+                zIndex={2} // 정보창이 다른 오버레이보다 위에 표시되도록 z-index 설정
+                clickable={true} // 이 오버레이 클릭 시 맵 클릭 이벤트가 발생하지 않도록 설정
+              >
+                <div
+                  className="bg-white rounded-lg border border-gray-300 shadow-md min-w-[200px] text-black overflow-hidden"
+                  onMouseOver={() => setOpenInfoWindow(marker.id)}
+                  onMouseOut={() => setOpenInfoWindow(null)}
+                >
+                  <div className="p-3">
+                    <div className="font-bold text-sm mb-1">
+                      {marker.placeName}
+                    </div>
+                    <div className="text-xs text-gray-600 mb-3">
+                      {marker.address}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="xs"
+                        className={`flex-1 h-8 text-xs ${
+                          Object.values(itinerary)
+                            .flat()
+                            .some((item) => item.id === marker.id)
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToItinerary(marker);
+                        }}
+                        disabled={Object.values(itinerary)
+                          .flat()
+                          .some((item) => item.id === marker.id)}
+                      >
+                        {Object.values(itinerary)
+                          .flat()
+                          .some((item) => item.id === marker.id)
+                          ? '추가됨'
+                          : '일정에 추가'}
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="destructive"
+                        className="flex-1 h-8 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          unmarkPoi(marker.id);
+                        }}
+                      >
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CustomOverlayMap>
+            )}
+          </MapMarker>
         ))}
 
         {/* 여행 계획(itinerary)에 포함된 마커에 순서 번호 표시 */}
@@ -348,7 +325,7 @@ export function MapPanel() {
             dayItinerary.map((marker, index) => (
               <CustomOverlayMap
                 key={`order-overlay-${marker.id}`}
-                position={{ lat: marker.lat, lng: marker.lng }}
+                position={{ lat: marker.latitude, lng: marker.longitude }}
                 yAnchor={2.5} // 마커 아이콘 위로 오버레이를 올립니다.
                 zIndex={1} // 마커보다 위에 표시되도록 z-index 설정
               >
