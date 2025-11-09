@@ -21,9 +21,11 @@ import { NotFound } from './components/NotFound';
 import { useAuthStore } from './store/authStore'; // Zustand 스토어 임포트
 import { NotificationListener } from './components/NotificationListener';
 import client from './api/client';
+import type { CreateWorkspaceResponse } from './types/workspace';
 import type { Post } from './types/post';
 import { Toaster } from 'sonner';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
+
 
 // Layout component for pages with Header
 function Layout({
@@ -129,16 +131,32 @@ function PostDetailWrapper({
   const handleJoinWorkspace = (postId: string, workspaceName: string) => {
     // TODO : 워크스페이스 생성 API를 호출해서 생성된 id 를 반환해야 함.
     const createAndNavigate = async () => {
+      // 디버깅용 로그
+      console.log(`postId`, postId);
+      console.log(`workspaceName`, workspaceName);
+
       try {
         // API 응답 데이터 구조에 맞게 타입과 변수명 수정
-        const response = await client.post<{
-          id: string;
-          workspaceName: string;
-        }>('/workspace', { postId, workspaceName });
-        const { id, workspaceName: resWorkspaceName } = response.data;
+        const response = await client.post<CreateWorkspaceResponse>(
+          '/workspace',
+          { postId, workspaceName }
+        );
+
+        // 디버깅용 로그
+        console.log(`=== POST /workspace 응답 ===`);
+        console.log(response.data);
+
+        const { planDayDtos, workspaceResDto } = response.data;
+        const { id, workspaceName: resWorkspaceName } = workspaceResDto;
+
+        // 디버깅용 로그
+        console.log(`id`, id);
+        console.log(`workspaceName`, resWorkspaceName);
+        console.log(`planDayDtos`, planDayDtos);
+
         // navigate의 state를 사용하여 워크스페이스 이름을 전달합니다.
         navigate(`/workspace/${id}`, {
-          state: { workspaceName: resWorkspaceName },
+          state: { workspaceName: resWorkspaceName, planDayDtos },
         });
       } catch (error) {
         console.error('Failed to create or join workspace:', error);
@@ -168,6 +186,7 @@ function WorkspaceWrapper() {
   const location = useLocation();
   const workspaceId = location.pathname.split('/').pop() || ''; // 명확한 변수명으로 변경
   const workspaceName = location.state?.workspaceName || '워크스페이스'; // state에서 이름 가져오기
+  const planDayDtos = location.state?.planDayDtos || [];
 
   const handleEndTrip = () => {
     navigate('/review');
@@ -177,6 +196,7 @@ function WorkspaceWrapper() {
     <Workspace
       workspaceId={workspaceId}
       workspaceName={workspaceName}
+      planDayDtos={planDayDtos}
       onEndTrip={handleEndTrip}
     />
   );

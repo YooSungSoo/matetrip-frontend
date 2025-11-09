@@ -13,6 +13,10 @@ const PoiSocketEvent = {
   MARKED: 'marked',
   UNMARK: 'unmark',
   UNMARKED: 'unmarked',
+  POI_CONNECT: 'poi:connect',
+  CONNECTED: 'connected',
+  POI_DISCONNECT: 'poi:disconnect',
+  DISCONNECTED: 'disconnected',
 } as const;
 
 // DayLayer 타입을 훅으로 이동하여 중앙에서 관리합니다.
@@ -25,24 +29,58 @@ export type Poi = {
   address: string;
   placeName?: string;
   planDayId?: string;
+  categoryName?: string;
+  distance?: number;
+  duration?: number;
 };
 
-type CreatePoiDto = {
+export type CreatePoiDto = {
   workspaceId: string;
   createdBy: string; // 현재 사용자 ID (임시)
-  planDayId?: string;
   longitude: number;
   latitude: number;
   address: string;
   placeName?: string;
+  planDayId?: string;
+  categoryName?: string;
 };
+
 type RemovePoiDto = { workspaceId: string; poiId: number | string };
+
+export type CreatePoiConnectionDto = {
+  workspaceId: string;
+  prevPoiId: number | string;
+  nextPoiId: number | string;
+  planDayId: string;
+  distance?: number; // 미터(m) 단위
+  duration?: number; // 초(s) 단위
+};
+
+// 백엔드에서 오는 Connection의 실제 타입
+export type PoiConnection = {
+  id: string;
+  prevPoiId: string | number;
+  nextPoiId: string | number;
+  planDayId: string;
+  distance?: number;
+  duration?: number;
+};
+
+// 서버와 동기화할 때 받는 데이터 타입
+type SyncPayload = {
+  pois: Poi[];
+  connections: Record<string, PoiConnection[]>; // planDayId를 키로 가지는 객체
+};
 
 export function usePoiSocket(workspaceId: string) {
   // 소켓 인스턴스를 ref로 관리하여 리렌더링 시에도 연결을 유지합니다.
   const socketRef = useRef<Socket | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
   const { user } = useAuthStore();
+  const [connections, setConnections] = useState<
+    Record<string, PoiConnection[]>
+  >({});
+  const [isSyncing, setIsSyncing] = useState(true);
 
   useEffect(() => {
     // 백엔드 주소와 네임스페이스에 맞게 소켓을 연결합니다.
@@ -62,10 +100,21 @@ export function usePoiSocket(workspaceId: string) {
       console.log(`Joined workspace: ${data.workspaceId}`);
     });
 
+    // SYNC 타임아웃 설정 (예: 10초)
+    const syncTimeout = setTimeout(() => {
+      console.error('SYNC 타임아웃: 서버 응답이 없습니다.');
+      setIsSyncing(false);
+      // 사용자에게 알림을 보여주는 로직을 추가할 수도 있습니다.
+      // 예: alert('데이터를 불러오는 데 실패했습니다. 페이지를 새로고침해주세요.');
+    }, 10000);
+
     // 3. 'sync' 이벤트: 서버로부터 초기 POI 목록을 받아 상태를 업데이트합니다.
-    socket.on(PoiSocketEvent.SYNC, (initialPois: Poi[]) => {
-      console.log('Syncing POIs:', initialPois);
-      setPois(initialPois);
+    socket.on(PoiSocketEvent.SYNC, (payload: SyncPayload) => {
+      clearTimeout(syncTimeout); // SYNC 성공 시 타임아웃을 제거합니다.
+      console.log('Syncing Data:', payload);
+      setPois(payload.pois || []); // payload.pois가 없을 경우를 대비해 빈 배열을 기본값으로 설정
+      setConnections(payload.connections || {});
+      setIsSyncing(false);
     });
 
     // 4. 'marked' 이벤트: 다른 사용자가 추가한 POI를 실시간으로 반영합니다.
@@ -74,13 +123,43 @@ export function usePoiSocket(workspaceId: string) {
     });
 
     // 5. 'unmarked' 이벤트: 다른 사용자가 삭제한 POI를 실시간으로 반영합니다.
-    socket.on(PoiSocketEvent.UNMARKED, (removedPoi: Poi) => {
-      setPois((prevPois) => prevPois.filter((p) => p.id !== removedPoi.id));
+    // 백엔드에서 { poiId: ... } 형태로 데이터를 보내주는 것에 맞춰 수정합니다.
+    socket.on(PoiSocketEvent.UNMARKED, (data: { poiId: number | string }) => {
+      console.log('POI Unmarked:', data);
+      setPois((prevPois) => prevPois.filter((p) => p.id !== data.poiId));
+    });
+
+    // 6. 'connected' 이벤트: POI 연결 성공 시 서버로부터 받은 연결 정보를 콘솔에 출력합니다.
+    socket.on(PoiSocketEvent.CONNECTED, (connectionData: PoiConnection) => {
+      console.log('✅ POI Connection successful:', connectionData);
+      // 실시간으로 connections 상태를 업데이트합니다.
+      setConnections((prev) => {
+        const dayConnections = prev[connectionData.planDayId] || [];
+        return {
+          ...prev,
+          [connectionData.planDayId]: [...dayConnections, connectionData],
+        };
+      });
+
+      // itinerary 상태 업데이트를 위해 연결된 POI에 distance와 duration 추가
+      setPois((prevPois) =>
+        prevPois.map((poi) => {
+          if (poi.id === connectionData.nextPoiId) {
+            return {
+              ...poi,
+              distance: connectionData.distance,
+              duration: connectionData.duration,
+            };
+          }
+          return poi;
+        })
+      );
     });
 
     // 컴포넌트 언마운트 시 소켓 연결을 해제합니다.
     return () => {
       console.log('Disconnecting socket...');
+      clearTimeout(syncTimeout); // 컴포넌트 언마운트 시 타임아웃도 정리합니다.
       socket.emit(PoiSocketEvent.LEAVE, { workspaceId });
       socket.disconnect();
     };
@@ -88,7 +167,7 @@ export function usePoiSocket(workspaceId: string) {
 
   // POI 추가/삭제를 위한 함수를 반환합니다.
   const markPoi = (
-    poiData: Omit<CreatePoiDto, 'workspaceId' | 'createdBy'>
+    poiData: Omit<CreatePoiDto, 'workspaceId' | 'createdBy' | 'id'>
   ) => {
     // 로그인한 사용자가 없으면 작업을 중단합니다.
     if (!user?.userId) {
@@ -108,5 +187,19 @@ export function usePoiSocket(workspaceId: string) {
     socketRef.current?.emit(PoiSocketEvent.UNMARK, { workspaceId, poiId });
   };
 
-  return { pois, markPoi, unmarkPoi };
+  const connectPoi = (
+    connectionData: Omit<CreatePoiConnectionDto, 'workspaceId'>
+  ) => {
+    const payload = { ...connectionData, workspaceId };
+    console.log(
+      '[시뮬레이션] POI_Connection 테이블 저장 데이터 (POI_CONNECT 이벤트 전송):',
+      payload
+    );
+    socketRef.current?.emit(PoiSocketEvent.POI_CONNECT, payload);
+  };
+
+  // unmarkPoi와 마찬가지로 disconnectPoi 함수도 추가할 수 있습니다.
+  // const disconnectPoi = ( ... ) => { ... };
+
+  return { pois, connections, isSyncing, markPoi, unmarkPoi, connectPoi };
 }

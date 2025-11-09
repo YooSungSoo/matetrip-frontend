@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Users,
   X,
@@ -10,13 +10,16 @@ import {
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { type DayLayer, MapPanel } from './MapPanel';
+import { MapPanel, type DayLayer } from './MapPanel';
+import type { PlanDayDto } from '../types/workspace';
 import { ChatPanel } from './ChatPanel';
 import { PlanPanel } from './PlanPanel';
+import { type Poi, usePoiSocket } from '../hooks/usePoiSocket.ts';
 
 interface WorkspaceProps {
   workspaceId: string;
   workspaceName: string;
+  planDayDtos: PlanDayDto[];
   onEndTrip: () => void;
 }
 
@@ -26,24 +29,57 @@ const MOCK_MEMBERS = [
   { id: 3, name: '제주사랑', isAuthor: false },
 ];
 
+/**
+ * 주어진 문자열(예: day.id)을 기반으로 일관된 색상을 생성합니다.
+ * @param str - 색상을 생성할 기반이 되는 문자열
+ * @returns 16진수 색상 코드 (e.g., '#RRGGBB')
+ */
+const generateColorFromString = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    // 간단한 해시 함수(djb2)를 사용하여 문자열을 숫자로 변환합니다.
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    // 해시 값을 사용하여 RGB 각 채널의 색상 값을 생성합니다.
+    const value = (hash >> (i * 8)) & 0xff;
+    // 값을 128-255 범위로 조정하여 너무 어두운 색상을 방지합니다.
+    const brightValue = Math.floor(value / 2) + 128;
+    // 값을 16진수로 변환하고, 한 자리 수일 경우 앞에 '0'을 붙여 두 자리로 만듭니다.
+    color += brightValue.toString(16).padStart(2, '0');
+  }
+  return color.toUpperCase();
+};
+
 export function Workspace({
   workspaceId,
   workspaceName,
+  planDayDtos,
   onEndTrip,
 }: WorkspaceProps) {
   const [showMembers, setShowMembers] = useState(false);
-  // DayLayers 상태를 최상위 공통 부모인 Workspace 컴포넌트에서 관리합니다.
-  const [dayLayers, setDayLayers] = useState<DayLayer[]>(() => {
-    // 여행 일수만큼 UUID를 생성하여 초기 레이어를 설정합니다.
-    // 이 로직은 Workspace가 렌더링될 때 한 번만 실행됩니다.
-    // !! 중요: 모든 사용자가 동일한 ID를 공유해야 하므로, 시뮬레이션 단계에서는 UUID 대신 고정된 문자열 ID를 사용합니다.
-    const initialDays = 2;
-    return Array.from({ length: initialDays }, (_, i) => ({
-      id: `day-${i + 1}`, // 예: 'day-1', 'day-2'
-      label: `Day ${i + 1}`,
-      color: i % 2 === 0 ? '#FF5733' : '#3357FF',
-    }));
-  });
+
+  // MapPanel과 PlanPanel이 공유할 일정 상태를 Workspace 컴포넌트로 이동
+  const [itinerary, setItinerary] = useState<Record<string, Poi[]>>({});
+
+  // 소켓은 최상위 컴포넌트에서 한 번만 연결하고,
+  // 모든 반환값을 하위 컴포넌트에 props로 전달합니다.
+  const { pois, connections, isSyncing, markPoi, unmarkPoi, connectPoi } =
+    usePoiSocket(workspaceId);
+
+  // planDayDtos가 변경될 때마다 dayLayers를 다시 계산합니다.
+  // useMemo를 사용하여 planDayDtos가 실제로 변경되었을 때만 map 함수가 실행되도록 최적화합니다.
+  const dayLayers = useMemo(
+    () =>
+      planDayDtos.map((day) => ({
+        id: day.id,
+        label: day.planDate,
+        color: generateColorFromString(day.id),
+      })),
+    [planDayDtos]
+  );
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -116,7 +152,17 @@ export function Workspace({
 
           <div className="flex-1 overflow-hidden">
             <TabsContent value="map" className="h-full m-0">
-              <MapPanel workspaceId={workspaceId} dayLayers={dayLayers} />
+              <MapPanel
+                itinerary={itinerary}
+                setItinerary={setItinerary}
+                dayLayers={dayLayers}
+                pois={pois}
+                connections={connections}
+                isSyncing={isSyncing}
+                markPoi={markPoi}
+                unmarkPoi={unmarkPoi}
+                connectPoi={connectPoi}
+              />
             </TabsContent>
 
             <TabsContent value="chat" className="h-full m-0">
@@ -130,7 +176,11 @@ export function Workspace({
             </TabsContent>
 
             <TabsContent value="plan" className="h-full m-0">
-              <PlanPanel dayLayers={dayLayers} />
+              <PlanPanel
+                itinerary={itinerary}
+                dayLayers={dayLayers}
+                unmarkPoi={unmarkPoi}
+              />
             </TabsContent>
           </div>
         </Tabs>
