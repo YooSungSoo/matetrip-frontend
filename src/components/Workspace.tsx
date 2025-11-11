@@ -429,67 +429,10 @@ export function Workspace({
             isChatConnected={isChatConnected} // isChatConnected prop 전달
           />
         </div>
-      )}
-      <div className="flex justify-center">
-        {/* 📌화상 주석 처리 
-        <VideoChat workspaceId={workspaceId} /> */}
       </div>
-      {/* Main Content with Tabs */}
-      <div className="flex-1 overflow-hidden">
-        <Tabs defaultValue="map" className="h-full flex flex-col">
-          <TabsList className="bg-white border-b rounded-none w-full justify-start px-4">
-            <TabsTrigger value="map" className="gap-2">
-              <MapIcon className="w-4 h-4" />
-              지도
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="gap-2">
-              <MessageCircle className="w-4 h-4" />
-              채팅
-            </TabsTrigger>
-            <TabsTrigger value="search" className="gap-2">
-              <Search className="w-4 h-4" />
-              검색
-            </TabsTrigger>
-            <TabsTrigger value="plan" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              일정
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex-1 overflow-hidden">
-            <TabsContent value="map" className="h-full m-0">
-              <MapPanel
-                itinerary={itinerary}
-                setItinerary={setItinerary}
-                dayLayers={dayLayers}
-                pois={pois}
-                connections={connections}
-                isSyncing={isSyncing}
-                markPoi={markPoi}
-                unmarkPoi={unmarkPoi}
-                connectPoi={connectPoi}
-              />
-            </TabsContent>
-
-            <TabsContent value="chat" className="h-full m-0">
-              <ChatPanel />
-            </TabsContent>
-
-            <TabsContent value="search" className="h-full m-0 p-4">
-              <div className="h-full flex items-center justify-center text-gray-500">
-                검색 기능 (개발 예정)
-              </div>
-            </TabsContent>
-
-            <TabsContent value="plan" className="h-full m-0">
-              <PlanPanel
-                itinerary={itinerary}
-                dayLayers={dayLayers}
-                unmarkPoi={unmarkPoi}
-              />
-            </TabsContent>
-          </div>
-        </Tabs>
+      <div className="flex justify-center">
+        {/* 📌화상 주석 처리 */}
+        <VideoChat workspaceId={workspaceId} />
       </div>
       <DragOverlay>
         {activePoi ? <DraggablePoiItem poi={activePoi} /> : null}
