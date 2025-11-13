@@ -289,6 +289,7 @@ export function EditProfileModal({
         const s3Response = await fetch(uploadUrl, {
           method: 'PUT',
           body: file,
+          headers: { 'Content-Type': safeFileType },
         });
         if (!s3Response.ok) {
           throw new Error('이미지 업로드에 실패했습니다.');
