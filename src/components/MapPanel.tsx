@@ -1,6 +1,6 @@
 import { PlusCircle, X } from 'lucide-react'; // PlusCircle, X 아이콘 임포트
 import React, { useEffect, useRef, useState, memo, useCallback } from 'react';
-import type { Poi, CreatePoiDto } from '../hooks/usePoiSocket';
+import type { Poi } from '../hooks/usePoiSocket';
 import {
   Map as KakaoMap,
   MapMarker,
@@ -55,7 +55,9 @@ interface PlaceMarkerProps {
  */
 const PlaceMarker = memo(({ place, onPlaceClick }: PlaceMarkerProps) => {
   const [isInfoWindowOpen, setIsInfoWindowOpen] = useState(false);
-  const infoWindowTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const infoWindowTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   useEffect(() => {
     return () => {
@@ -89,7 +91,8 @@ const PlaceMarker = memo(({ place, onPlaceClick }: PlaceMarkerProps) => {
   // 카테고리에 따른 아이콘 이미지 URL 생성
   const getMarkerImageSrc = (categoryCode: string): string => {
     // 카테고리별 색상 가져오기
-    const categoryInfo = CATEGORY_INFO[categoryCode as keyof typeof CATEGORY_INFO];
+    const categoryInfo =
+      CATEGORY_INFO[categoryCode as keyof typeof CATEGORY_INFO];
     const color = categoryInfo?.color || '#808080';
 
     // 카테고리별로 다른 SVG 아이콘 생성
@@ -217,8 +220,10 @@ const PlaceMarker = memo(({ place, onPlaceClick }: PlaceMarkerProps) => {
                 {place.summary}
               </div>
             )}
+
             <div className="mt-2 inline-block rounded bg-[#f5f5f5] px-2 py-1 text-[11px] text-[#999]">
-              {CATEGORY_INFO[place.category as keyof typeof CATEGORY_INFO]?.name || '기타'}
+              {CATEGORY_INFO[place.category as keyof typeof CATEGORY_INFO]
+                ?.name || '기타'}
             </div>
           </div>
         </CustomOverlayMap>
@@ -269,13 +274,15 @@ const PoiMarker = memo(
     const isScheduled = markerLabel !== undefined;
 
     // isScheduled가 true일 때만 커스텀 아이콘을 사용하고, false일 때는 undefined로 두어 기본 마커를 사용하도록 합니다.
-    const markerImage = isScheduled ? {
-      src: createCustomMarkerIcon(markerLabel, markerColor || '#FF5733'),
-      size: { width: 36, height: 48 },
-      options: {
-        offset: { x: 18, y: 48 }, // 마커의 하단 중앙을 좌표에 맞춤
-      },
-    } : undefined;
+    const markerImage = isScheduled
+      ? {
+          src: createCustomMarkerIcon(markerLabel, markerColor || '#FF5733'),
+          size: { width: 36, height: 48 },
+          options: {
+            offset: { x: 18, y: 48 }, // 마커의 하단 중앙을 좌표에 맞춤
+          },
+        }
+      : undefined;
 
     return (
       <MapMarker
@@ -297,7 +304,7 @@ const PoiMarker = memo(
             zIndex={3}
           >
             <div
-              className="block min-w-[180px] max-w-[400px] whitespace-normal rounded-lg bg-white p-2.5 text-left leading-relaxed shadow-[0_6px_20px_rgba(0,0,0,0.3)]"
+              // className="block min-w-[180px] max-w-[400px] whitespace-normal rounded-lg bg-white p-2.5 text-left leading-relaxed shadow-[0_6px_20px_rgba(0,0,0,0.3)]"
               onMouseOver={handleMouseOver}
               onMouseOut={handleMouseOut}
               className="p-3 bg-white rounded-lg shadow-lg min-w-[200px] flex flex-col gap-1 relative"
@@ -520,7 +527,8 @@ export function MapPanel({
   // 디바운스를 위한 타이머 ref
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 선택된 백엔드 장소 상태
-  const [selectedBackendPlace, setSelectedBackendPlace] = useState<PlaceDto | null>(null);
+  const [selectedBackendPlace, setSelectedBackendPlace] =
+    useState<PlaceDto | null>(null);
   // summary 펼치기/접기 상태
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
@@ -570,32 +578,38 @@ export function MapPanel({
   /**
    * 백엔드 장소 마커 클릭 시 처리
    */
-  const handlePlaceClick = useCallback((place: PlaceDto) => {
-    setSelectedBackendPlace(place);
-    setIsSummaryExpanded(false); // 새로운 장소 선택 시 summary 접기
+  const handlePlaceClick = useCallback(
+    (place: PlaceDto) => {
+      setSelectedBackendPlace(place);
+      setIsSummaryExpanded(false); // 새로운 장소 선택 시 summary 접기
 
-    // 지도가 있으면 해당 위치로 포커싱 및 줌 조정
-    if (mapInstance) {
-      const position = new window.kakao.maps.LatLng(place.latitude, place.longitude);
+      // 지도가 있으면 해당 위치로 포커싱 및 줌 조정
+      if (mapInstance) {
+        const position = new window.kakao.maps.LatLng(
+          place.latitude,
+          place.longitude
+        );
 
-      // 줌 레벨을 먼저 설정한 후 중앙으로 이동
-      mapInstance.setLevel(5);
+        // 줌 레벨을 먼저 설정한 후 중앙으로 이동
+        mapInstance.setLevel(5);
 
-      // setCenter를 사용하여 정확한 위치로 이동
-      mapInstance.setCenter(position);
-    }
-  }, [mapInstance]);
+        // setCenter를 사용하여 정확한 위치로 이동
+        mapInstance.setCenter(position);
+      }
+    },
+    [mapInstance]
+  );
 
   // 지도 인스턴스가 생성되면 초기 장소 데이터 로드
   useEffect(() => {
     if (mapInstance) {
       fetchPlacesInView(mapInstance);
     }
-    
+
     return () => {
-        if (fetchTimerRef.current) {
-            clearTimeout(fetchTimerRef.current);
-        }
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
+      }
     };
   }, [mapInstance, fetchPlacesInView]);
 
@@ -1117,7 +1131,11 @@ export function MapPanel({
         ))}
         {/* 백엔드에서 가져온 장소 마커 렌더링 */}
         {places.map((place) => (
-          <PlaceMarker key={place.id} place={place} onPlaceClick={handlePlaceClick} />
+          <PlaceMarker
+            key={place.id}
+            place={place}
+            onPlaceClick={handlePlaceClick}
+          />
         ))}
 
         {/* 각 세그먼트별 Polyline 렌더링 */}
@@ -1151,10 +1169,6 @@ export function MapPanel({
             />
           ) : null;
         })}
-
-        {/* 각 세그먼트별 경로 정보 표시 CustomOverlayMap 추가 */}
-        {dayLayers.map((layer) => {
-          const segments = dailyRouteInfo[layer.id];
 
         {/* 다른 사용자가 호버한 POI 강조 효과 */}
         {hoveredPoiInfo &&
@@ -1401,10 +1415,14 @@ export function MapPanel({
               className="mb-3 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold text-white"
               style={{
                 backgroundColor:
-                  CATEGORY_INFO[selectedBackendPlace.category as keyof typeof CATEGORY_INFO]?.color || '#808080',
+                  CATEGORY_INFO[
+                    selectedBackendPlace.category as keyof typeof CATEGORY_INFO
+                  ]?.color || '#808080',
               }}
             >
-              {CATEGORY_INFO[selectedBackendPlace.category as keyof typeof CATEGORY_INFO]?.name || '기타'}
+              {CATEGORY_INFO[
+                selectedBackendPlace.category as keyof typeof CATEGORY_INFO
+              ]?.name || '기타'}
             </div>
 
             {selectedBackendPlace.summary && (

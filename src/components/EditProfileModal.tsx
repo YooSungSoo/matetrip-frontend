@@ -15,6 +15,8 @@ import type { UpdateProfileDto } from '../types/updateprofiledto';
 import type { TravelStyleType } from '../constants/travelStyle';
 import type { TravelTendencyType } from '../constants/travelTendencyType';
 import { useAuthStore } from '../store/authStore';
+import type { GenderType } from '../constants/gender.ts';
+import type { MbtiType } from '../constants/mbti.ts';
 
 interface EditProfileModalProps {
   open: boolean;
@@ -28,6 +30,8 @@ interface EditProfileModalProps {
     description: string; // detailedBio 대신 description 사용
     travelStyles: TravelStyleType[];
     tendency: TravelTendencyType[];
+    gender?: GenderType;
+    mbtiTypes?: MbtiType;
   } | null;
 }
 
@@ -46,6 +50,8 @@ export function EditProfileModal({
   const [selectedTravelTendencies, setSelectedTravelTendencies] = useState<
     TravelTendencyType[]
   >(user?.tendency || []);
+  const [gender, setGender] = useState<GenderType>(user?.gender || '남성');
+  const [mbti, setMbti] = useState<MbtiType>(user?.mbtiTypes || 'ENFP');
   const [currentProfileImageId, setCurrentProfileImageId] = useState<
     string | null
   >(user?.profileImageId ?? null);
@@ -78,6 +84,8 @@ export function EditProfileModal({
     setDetailedBio(user.description || '');
     setSelectedTravelStyles(user.travelStyles || []);
     setSelectedTravelTendencies(user.tendency || []);
+    setGender(user.gender || '남성');
+    setMbti(user.mbtiTypes || 'ENFP');
     setCurrentProfileImageId(user.profileImageId ?? null);
     setPendingProfileImageFile(null);
     setProfileImagePreview(null);
@@ -224,11 +232,11 @@ export function EditProfileModal({
     setSelectedTravelStyles(selectedTravelStyles.filter((s) => s !== style));
   };
 
-  const handleAddStyle = (style: TravelStyleType) => {
-    if (!selectedTravelStyles.includes(style)) {
-      setSelectedTravelStyles([...selectedTravelStyles, style]);
-    }
-  };
+  // const handleAddStyle = (style: TravelStyleType) => {
+  //   if (!selectedTravelStyles.includes(style)) {
+  //     setSelectedTravelStyles([...selectedTravelStyles, style]);
+  //   }
+  // };
 
   const handleToggleStyle = (style: TravelStyleType) => {
     setSelectedTravelStyles((prev) =>
@@ -244,11 +252,11 @@ export function EditProfileModal({
     );
   };
 
-  const handleAddTendency = (tendency: TravelTendencyType) => {
-    if (!selectedTravelTendencies.includes(tendency)) {
-      setSelectedTravelTendencies([...selectedTravelTendencies, tendency]);
-    }
-  };
+  // const handleAddTendency = (tendency: TravelTendencyType) => {
+  //   if (!selectedTravelTendencies.includes(tendency)) {
+  //     setSelectedTravelTendencies([...selectedTravelTendencies, tendency]);
+  //   }
+  // };
 
   const handleToggleTendency = (tendency: TravelTendencyType) => {
     setSelectedTravelTendencies((prev) =>
@@ -303,6 +311,8 @@ export function EditProfileModal({
         description: detailedBio,
         travelStyles: selectedTravelStyles,
         tendency: selectedTravelTendencies,
+        gender: gender,
+        mbtiTypes: mbti,
         profileImageId: nextProfileImageId,
       };
       // 사진외의 프로필 수정
@@ -333,6 +343,8 @@ export function EditProfileModal({
               description: detailedBio,
               travelStyles: selectedTravelStyles,
               tendency: selectedTravelTendencies,
+              gender: gender,
+              mbtiTypes: mbti,
               profileImageId: nextProfileImageId ?? null,
             },
           },
@@ -424,7 +436,7 @@ export function EditProfileModal({
                   <div className="flex items-start gap-6">
                     <div className="relative group">
                       <div className="relative w-32 h-32 rounded-full overflow-hidden bg-white ring-2 ring-gray-200 ring-offset-2 ring-offset-white transition-all group-hover:ring-gray-300">
-                        {/* res.json()에서 받은 url을 <img src={url}>로 쓰면 브라우저가 그 URL을 이용해 S3에서 실제 이미지를 내려 받는 HTTP 요청을 자동으로 보내는데, 
+                        {/* res.json()에서 받은 url을 <img src={url}>로 쓰면 브라우저가 그 URL을 이용해 S3에서 실제 이미지를 내려 받는 HTTP 요청을 자동으로 보내는데,
                         이건 코드로 직접 쓰진 않아도 브라우저 레벨에서 발생하는 2번째 호출 */}
                         {profileImageUrl ? (
                           <ImageWithFallback

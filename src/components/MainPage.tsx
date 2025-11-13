@@ -1,12 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  MapPin,
-  ClipboardList,
-  Plus,
-  Info,
-  Sparkles,
-  Wand2,
-} from 'lucide-react';
+import { MapPin, ClipboardList, Plus, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client';
@@ -165,7 +158,9 @@ export function MainPage({
         );
 
         // '최신 동행 모집' 섹션에는 '모집중'인 글만 필터링하여 설정
-        const recruitingPosts = sortedInitialPosts.filter(post => post.status === '모집중');
+        const recruitingPosts = sortedInitialPosts.filter(
+          (post) => post.status === '모집중'
+        );
         setPosts(recruitingPosts);
         console.log(`최신 동행 글 목록`, sortedInitialPosts);
 
@@ -221,7 +216,7 @@ export function MainPage({
         if (!isMounted) {
           return;
         }
-        console.log('match response', res.data);
+        console.log('match response', res.data); // res.data is now MatchCandidateDto[]
         setMatches(res.data ?? []);
       } catch (err) {
         if (!isMounted) {

@@ -21,8 +21,6 @@ import { WorkspaceCard } from './WorkspaceCard';
 import { EditProfileModal } from './EditProfileModal'; // Import EditProfileModal
 import type { TravelStyleType } from '../constants/travelStyle';
 import type { TravelTendencyType } from '../constants/travelTendencyType';
-import type { GenderType } from '../constants/gender';
-import type { MbtiType } from '../constants/mbti';
 
 interface ProfileModalProps {
   open: boolean;
@@ -188,8 +186,8 @@ export function ProfileModal({
     typeof rawMannerTemperature === 'number'
       ? rawMannerTemperature
       : rawMannerTemperature != null
-      ? Number(rawMannerTemperature)
-      : null;
+        ? Number(rawMannerTemperature)
+        : null;
   const mannerTemperature = Number.isFinite(parsedMannerTemperature)
     ? parsedMannerTemperature
     : null;
@@ -460,8 +458,8 @@ export function ProfileModal({
             description: profile.description || '', // profile.description을 description으로 직접 전달
             travelStyles: (profile.travelStyles || []) as TravelStyleType[],
             tendency: (profile.tendency || []) as TravelTendencyType[],
-            // gender: profile.gender as GenderType,
-            // mbtiTypes: profile.mbtiTypes as MbtiType,
+            // gender: profile.gender,
+            // mbtiTypes: profile.mbtiTypes,
           }}
         />
       )}
