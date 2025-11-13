@@ -8,6 +8,8 @@ export interface UserProfile {
   travelTendency: string[];
   mbtiTypes: string;
   profileImage?: string; // 프로필 이미지는 응답에 없지만, 확장성을 위해 추가
+  mannerTemperature?: number;
+  mannerTemp?: number;
 }
 
 export interface Requester {

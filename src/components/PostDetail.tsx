@@ -50,6 +50,28 @@ interface PostDetailProps {
   onDeleteSuccess: () => void; // 삭제 성공 시 호출될 콜백
 }
 
+type ProfileWithMannerTemperature = {
+  mannerTemperature?: number | null;
+  mannerTemp?: number | null;
+};
+
+const formatMannerTemperature = (
+  profile?: ProfileWithMannerTemperature | null
+) => {
+  const raw =
+    profile?.mannerTemperature ?? profile?.mannerTemp ?? null;
+  const parsed =
+    typeof raw === 'number'
+      ? raw
+      : raw != null
+      ? Number(raw)
+      : null;
+
+  return typeof parsed === 'number' && Number.isFinite(parsed)
+    ? `${parsed.toFixed(1)}°C`
+    : '정보 없음';
+};
+
 export function PostDetail({
   postId,
   onJoinWorkspace,
@@ -356,7 +378,9 @@ export function PostDetail({
                       </p>
                       <div className="flex items-center gap-2 mb-2">
                         <Thermometer className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm text-blue-600">36.5°C</span>
+                        <span className="text-sm text-blue-600">
+                          {formatMannerTemperature(post.writer?.profile)}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {post.writer?.profile?.travelStyles?.map((style) => (
@@ -433,7 +457,11 @@ export function PostDetail({
                               </span>
                               <div className="flex items-center gap-1 text-sm text-blue-600">
                                 <Thermometer className="w-4 h-4" />
-                                <span>36.5°C</span>
+                                <span>
+                                  {formatMannerTemperature(
+                                    p.requester.profile
+                                  )}
+                                </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
@@ -495,7 +523,11 @@ export function PostDetail({
                               </span>
                               <div className="flex items-center gap-1 text-sm text-blue-600">
                                 <Thermometer className="w-4 h-4" />
-                                <span>36.5°C</span>
+                                <span>
+                                  {formatMannerTemperature(
+                                    request.requester.profile
+                                  )}
+                                </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1">

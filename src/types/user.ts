@@ -8,6 +8,8 @@ export interface UserProfile {
   travelStyles: string[];
   tendency: string[];
   profileImageId?: string;
+  mannerTemperature?: number;
+  mannerTemp?: number;
 }
 
 export interface User {

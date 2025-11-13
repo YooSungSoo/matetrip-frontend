@@ -11,6 +11,7 @@ interface Profile {
   mbtiTypes: string;
   travelStyles: string[];
   profileImageId: string | null;
+  mannerTemperature?: number;
 }
 
 interface User {

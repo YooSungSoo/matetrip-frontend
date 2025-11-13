@@ -78,7 +78,7 @@ export function ProfileModal({
     try {
       const [profileRes, writtenPostsRes, participatedPostsRes, reviewsRes] =
         await Promise.all([
-          client.get<UserProfile>(`/users/${userId}/profile`),
+          client.get<UserProfile>(`/profile/user/${userId}`),
           client.get<Post[]>(`/users/${userId}/posts`),
           client.get<Post[]>(`/users/${userId}/participations`),
           // API 응답이 POST가 아닌 GET으로 추정됩니다.
@@ -91,7 +91,7 @@ export function ProfileModal({
         participatedPostsRes.data
       );
 
-      console.log('GET /users/{userId}profile 응답', profileRes.data);
+      console.log('GET /profile/user/{userId} 응답', profileRes.data);
 
       setProfile(profileRes.data);
       setError(null);
@@ -162,6 +162,18 @@ export function ProfileModal({
     );
   }
 
+  const rawMannerTemperature =
+    profile.mannerTemperature ?? profile.mannerTemp ?? null;
+  const parsedMannerTemperature =
+    typeof rawMannerTemperature === 'number'
+      ? rawMannerTemperature
+      : rawMannerTemperature != null
+      ? Number(rawMannerTemperature)
+      : null;
+  const mannerTemperature = Number.isFinite(parsedMannerTemperature)
+    ? parsedMannerTemperature
+    : null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,7 +241,11 @@ export function ProfileModal({
                     <p className="text-gray-500 text-sm mb-1">매너온도</p>
                     <div className="flex items-center justify-center gap-1 text-blue-600 font-semibold">
                       <Thermometer className="w-4 h-4" />
-                      <p>36.5°C</p>
+                      <p>
+                        {mannerTemperature != null
+                          ? `${mannerTemperature.toFixed(1)}°C`
+                          : '정보 없음'}
+                      </p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4 text-center">
