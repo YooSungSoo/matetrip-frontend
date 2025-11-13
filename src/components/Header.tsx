@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Map, LogIn, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuthStore } from '../store/authStore';
 import { NotificationPanel } from './NotificationPanel'; // new-ui의 컴포넌트 사용
 import { SearchBar } from './SearchBar'; // new-ui의 컴포넌트 사용
+import client from '../api/client';
 
 interface HeaderProps {
   isLoggedIn: boolean;
@@ -24,6 +26,37 @@ export function Header({
   onSearch,
 }: HeaderProps) {
   const { user } = useAuthStore();
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProfileImage = async () => {
+      if (!user?.profile?.profileImageId) {
+        setProfileImageUrl(null);
+        return;
+      }
+      try {
+        const response = await client.get<{ url: string }>(
+          `/binary-content/${user.profile.profileImageId}/presigned-url`
+        );
+        if (isMounted) {
+          setProfileImageUrl(response.data.url);
+        }
+      } catch (error) {
+        console.error('헤더 프로필 이미지 로드 실패:', error);
+        if (isMounted) {
+          setProfileImageUrl(null);
+        }
+      }
+    };
+
+    fetchProfileImage();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.profile?.profileImageId]);
 
   return (
     <header className="w-full border-b bg-white shadow-sm sticky top-0 z-50 h-18">
@@ -64,21 +97,14 @@ export function Header({
                   onClick={onProfileClick}
                   className="w-10 h-10 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
                 >
-                  {user?.profile?.profileImageId ? (
-                    <img
-                      src={
-                        user.profile.profileImageId
-                      }
-                      alt="profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <img
-                      src={`https://ui-avatars.com/api/?name=${user?.profile?.nickname}&background=random`}
-                      alt="profile"
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+                  <img
+                    src={
+                      profileImageUrl ||
+                      `https://ui-avatars.com/api/?name=${user?.profile?.nickname}&background=random`
+                    }
+                    alt="profile"
+                    className="w-full h-full object-cover"
+                  />
                 </button>
                 <div className="flex items-center gap-2">
                   {user && (

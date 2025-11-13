@@ -10,6 +10,7 @@ interface Profile {
   intro: string;
   mbtiTypes: string;
   travelStyles: string[];
+  tendency: string[];
   profileImageId: string | null;
 }
 

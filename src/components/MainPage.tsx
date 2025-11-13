@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react';
-import { MapPin, ClipboardList, Plus } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  MapPin,
+  ClipboardList,
+  Plus,
+  Info,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client';
 import { type Post } from '../types/post';
 import { MainPostCardSkeleton } from './MainPostCardSkeleton';
 import { WorkspaceCarousel } from './WorkspaceCarousel';
+import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
+import type { MatchCandidateDto, MatchingInfo } from '../types/matching';
 
 interface MainPageProps {
   onSearch: (params: {
@@ -66,6 +75,45 @@ const REGION_CATEGORIES = [
   },
 ];
 
+const normalizeOverlapText = (values?: unknown): string | undefined => {
+  if (!values) {
+    return undefined;
+  }
+
+  const arrayValues = Array.isArray(values) ? values : [values];
+
+  const normalized = arrayValues
+    .map((value) => {
+      if (!value) {
+        return '';
+      }
+      if (typeof value === 'string') {
+        return value;
+      }
+      if (typeof value === 'object') {
+        const candidate = value as Record<string, unknown>;
+        if (typeof candidate.label === 'string') {
+          return candidate.label;
+        }
+        if (typeof candidate.value === 'string') {
+          return candidate.value;
+        }
+        if (typeof candidate.name === 'string') {
+          return candidate.name;
+        }
+      }
+      return String(value);
+    })
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0);
+
+  if (!normalized.length) {
+    return undefined;
+  }
+
+  return normalized.join(', ');
+};
+
 export function MainPage({
   onSearch,
   onViewPost,
@@ -77,6 +125,20 @@ export function MainPage({
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true); // Single loading state for both sections
   const { user, isAuthLoading } = useAuthStore(); // Get user and isAuthLoading from auth store
+  const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
+  const [isMatchesLoading, setIsMatchesLoading] = useState(true);
+  const [featuredView, setFeaturedView] = useState<'latest' | 'recommended'>(
+    'latest'
+  );
+  const travelStyleKey =
+    user?.profile?.travelStyles?.join(',') ??
+    user?.profile?.travelStyles?.toString() ??
+    '';
+  const tendencyKey =
+    user?.profile?.tendency?.join(',') ??
+    user?.profile?.tendency?.toString() ??
+    '';
+  const descriptionKey = user?.profile?.description ?? '';
 
   useEffect(() => {
     // isAuthLoading이 true일 때는 API 호출을 하지 않습니다.
@@ -103,7 +165,9 @@ export function MainPage({
         );
 
         // '최신 동행 모집' 섹션에는 '모집중'인 글만 필터링하여 설정
-        const recruitingPosts = sortedInitialPosts.filter(post => post.status === '모집중');
+        const recruitingPosts = sortedInitialPosts.filter(
+          (post) => post.status === '모집중'
+        );
         setPosts(recruitingPosts);
         console.log(`최신 동행 글 목록`, sortedInitialPosts);
 
@@ -113,7 +177,10 @@ export function MainPage({
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           setUserPosts(sortedUserPosts);
-          console.log(`${user.profile.nickname}님이 참여중인 여행`, sortedUserPosts);
+          console.log(
+            `${user.profile.nickname}님이 참여중인 여행`,
+            sortedUserPosts
+          );
         } else {
           setUserPosts([]);
         }
@@ -124,7 +191,6 @@ export function MainPage({
       }
     };
 
-
     fetchAllPosts();
   }, [
     isLoggedIn,
@@ -133,22 +199,297 @@ export function MainPage({
     isAuthLoading,
     fetchTrigger,
   ]); // Add fetchTrigger to dependency array
-  
+
+  // matching 유사도로 추천 글 받아오기 (로그인 시점에 맞춰 다시 호출)
+  useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
+    if (!isLoggedIn || !user?.userId) {
+      setMatches([]);
+      setIsMatchesLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchMatches = async () => {
+      setIsMatchesLoading(true);
+      try {
+        const res = await client.post<MatchCandidateDto[]>('/matching/search', {
+          limit: 5,
+        });
+        if (!isMounted) {
+          return;
+        }
+        console.log('match response', res.data);
+        setMatches(res.data ?? []);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        console.error('Failed to fetch matches', err);
+      } finally {
+        if (isMounted) {
+          setIsMatchesLoading(false);
+        }
+      }
+    };
+
+    fetchMatches();
+    console.log('matching search 완료!');
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    isAuthLoading,
+    isLoggedIn,
+    user?.userId,
+    travelStyleKey,
+    tendencyKey,
+    descriptionKey,
+  ]);
+
+  // const handleSearch = (e: React.FormEvent) => {
+  //   e?.preventDefault();
+  //   onSearch({
+  //     startDate: searchStartDate,
+  //     endDate: searchEndDate,
+  //     location: searchLocation,
+  //     title: searchTitle,
+  //   });
+  // };
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setFeaturedView('latest');
+    }
+  }, [isLoggedIn]);
+
+  const { recommendedPosts, matchingInfoByPostId } = useMemo(() => {
+    const toPercent = (value?: number) => {
+      if (value === undefined || value === null) {
+        return 0;
+      }
+      return Math.round(value <= 1 ? value * 100 : value);
+    };
+
+    const entries: Array<{ post: Post; info: MatchingInfo }> = [];
+    const seenPostIds = new Set<string>();
+
+    matches.forEach((candidate) => {
+      const matchedPost = posts.find((post) => {
+        const writerIds = [
+          post.writerId,
+          post.writer?.id,
+          post.writerProfile?.id,
+        ].filter(Boolean);
+        return writerIds.includes(candidate.userId);
+      });
+
+      if (!matchedPost || seenPostIds.has(matchedPost.id)) {
+        return;
+      }
+
+      seenPostIds.add(matchedPost.id);
+
+      const tendencyText = normalizeOverlapText(
+        candidate.overlappingTendencies
+      );
+
+      const styleText = normalizeOverlapText(candidate.overlappingTravelStyles);
+
+      entries.push({
+        post: matchedPost,
+        info: {
+          score: toPercent(candidate.score),
+          vectorscore:
+            candidate.vectorScore !== undefined
+              ? toPercent(candidate.vectorScore)
+              : undefined,
+          tendency: tendencyText,
+          style: styleText,
+        },
+      });
+    });
+
+    return {
+      recommendedPosts: entries.map((entry) => entry.post),
+      matchingInfoByPostId: entries.reduce<Record<string, MatchingInfo>>(
+        (acc, entry) => {
+          acc[entry.post.id] = entry.info;
+          return acc;
+        },
+        {}
+      ),
+    };
+  }, [matches, posts]);
+
+  const activeFeaturedView =
+    featuredView === 'recommended' && isLoggedIn ? 'recommended' : 'latest';
+
+  const featuredTitle =
+    activeFeaturedView === 'recommended' && user
+      ? `${user?.profile.nickname}님과 성향이 비슷한 유저들이 동행을 구하고 있어요`
+      : '최신 동행 모집';
+
+  const isFeaturedLoading =
+    activeFeaturedView === 'recommended' ? isMatchesLoading : isLoading;
+
+  const featuredItems =
+    activeFeaturedView === 'recommended' ? recommendedPosts : posts;
+
+  const featuredEmptyMessage =
+    activeFeaturedView === 'recommended'
+      ? '추천할 게시글이 없습니다.'
+      : '최신 게시글이 없습니다.';
+
+  const handleFeaturedViewChange = (view: 'latest' | 'recommended') => {
+    if (view === 'recommended' && !isLoggedIn) {
+      return;
+    }
+    setFeaturedView(view);
+  };
+
+  const isRecommendedButtonDisabled = !isLoggedIn;
+  const isRecommendedView = activeFeaturedView === 'recommended';
+
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50">
+      {!isLoggedIn && (
+        <div className="mb-8 rounded-2xl border border-blue-200 bg-white p-4 text-center shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900">
+            로그인하고 동행을 추천받아보세요
+          </h2>
+          <p className="text-sm text-gray-600">
+            여행 스타일, 성향, 프로필, MBTI 정보를 바탕으로 맞춤 동행을 확인할
+            수 있어요.
+          </p>
+        </div>
+      )}
       {/* --- User's Participating Trips Section --- */}
       {isLoggedIn && (
+        <>
+          <section className="mb-12">
+            <div className="flex items-center gap-2 mb-6">
+              <ClipboardList className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-gray-900">
+                {isLoading ? (
+                  <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
+                ) : (
+                  // user?.profile.nickname은 isLoading이 false일 때 안전하게 접근 가능
+                  `${user?.profile.nickname}님이 참여중인 여행`
+                )}
+              </h2>
+            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <MainPostCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : userPosts.length === 0 ? (
+              <div className="text-center text-gray-500 py-10">
+                참여중인 게시글이 없습니다.
+              </div>
+            ) : (
+              <WorkspaceCarousel
+                posts={userPosts}
+                onCardClick={(post) => onViewPost(post.id)}
+              />
+            )}
+          </section>
+        </>
+      )}
+
+      {/* --- Featured Section (Latest / Recommended toggle) --- */}
+      {isLoggedIn ? (
+        <section className="mb-12">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-blue-600" />
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {isFeaturedLoading ? (
+                      <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
+                    ) : (
+                      featuredTitle
+                    )}
+                  </h2>
+                </div>
+              </div>
+              {isRecommendedView && (
+                <p className="text-sm font-medium text-blue-900/80 flex items-center gap-1">
+                  <Sparkles className="w-4 h-4 text-pink-500" />
+                  여행 성향·스타일·프로필 상세소개·MBTI를 모두 반영한 맞춤 추천
+                  리스트예요.
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => handleFeaturedViewChange('latest')}
+                className={`px-4 py-1 text-sm font-medium rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 ${
+                  activeFeaturedView === 'latest'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                최신글 보기
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFeaturedViewChange('recommended')}
+                disabled={isRecommendedButtonDisabled}
+                className={`px-4 py-1 text-sm font-medium rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 ${
+                  isRecommendedView
+                    ? 'bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500 text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+                } ${
+                  isRecommendedButtonDisabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : ''
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Wand2 className="w-4 h-4" />
+                  추천 동행
+                </span>
+              </button>
+            </div>
+          </div>
+          {isFeaturedLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <MainPostCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : featuredItems.length === 0 ? (
+            <div className="text-center text-gray-500 py-10">
+              {featuredEmptyMessage}
+            </div>
+          ) : isRecommendedView ? (
+            <MatchingCarousel
+              posts={featuredItems}
+              matchingInfoByPostId={matchingInfoByPostId}
+              onCardClick={(post) => onViewPost(post.id)}
+            />
+          ) : (
+            <WorkspaceCarousel
+              posts={featuredItems}
+              onCardClick={(post) => onViewPost(post.id)}
+            />
+          )}
+        </section>
+      ) : (
         <section className="mb-12">
           <div className="flex items-center gap-2 mb-6">
             <ClipboardList className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">
-              {isLoading ? (
-                <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
-              ) : (
-                // user?.profile.nickname은 isLoading이 false일 때 안전하게 접근 가능
-                `${user?.profile.nickname}님이 참여중인 여행`
-              )}
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900">최신 동행 모집</h2>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -156,48 +497,18 @@ export function MainPage({
                 <MainPostCardSkeleton key={index} />
               ))}
             </div>
-          ) : userPosts.length === 0 ? (
+          ) : posts.length === 0 ? (
             <div className="text-center text-gray-500 py-10">
-              참여중인 게시글이 없습니다.
+              최신 게시글이 없습니다.
             </div>
           ) : (
             <WorkspaceCarousel
-              posts={userPosts}
+              posts={posts}
               onCardClick={(post) => onViewPost(post.id)}
             />
           )}
         </section>
       )}
-
-      {/* --- Recent Posts Section --- */}
-      <section className="mb-12">
-        <div className="flex items-center gap-2 mb-6">
-          <ClipboardList className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-bold text-gray-900">
-            {isLoading ? (
-              <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
-            ) : (
-              '최신 동행 모집'
-            )}
-          </h2>
-        </div>
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <MainPostCardSkeleton key={index} />
-            ))}
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center text-gray-500 py-10">
-            최신 게시글이 없습니다.
-          </div>
-        ) : (
-          <WorkspaceCarousel
-            posts={posts}
-            onCardClick={(post) => onViewPost(post.id)}
-          />
-        )}
-      </section>
 
       {/* --- Region Categories Section --- */}
       <section>

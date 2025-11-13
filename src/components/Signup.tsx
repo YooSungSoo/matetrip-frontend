@@ -140,20 +140,20 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
         if (loginResponse.status === 200) {
           // // 📌메인페이지 가기 전에 임베딩 처리 하기 (matching-profile 에 내용넣기)
 
-          // const userId =
-          //   signupResponse.data?.id || loginResponse.data?.user?.id;
+          const userId =
+            signupResponse.data?.id || loginResponse.data?.user?.id;
 
-          // if (userId) {
-          //   const syncPayload = {
-          //     //userId,
-          //     description: formData.description || '',
-          //     // 필요하면 travelStyles / tendency도 추가
-          //   };
-          //   await client.post('/matching/profile/embedding', syncPayload);
-          //   console.log('임베딩 완료!');
-          // } else {
-          //   throw new Error('Unable to determine userId after signup/login');
-          // }
+          if (userId) {
+            const syncPayload = {
+              //userId,
+              description: formData.description || '',
+              // 필요하면 travelStyles / tendency도 추가
+            };
+            await client.post('/matching/profile/embedding', syncPayload);
+            console.log('임베딩 완료!');
+          } else {
+            throw new Error('Unable to determine userId after signup/login');
+          }
 
           // summary 랑 embedding 호출
           // 로그인 성공 시 성공 모달을 띄웁니다.

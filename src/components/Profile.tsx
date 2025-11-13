@@ -710,14 +710,13 @@ export function Profile({
         <TabsContent value="trips">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {userPosts.map((post) => {
-              const displayStatus =
-                post.status === '모집중' || post.status === '여행중'
-                  ? 'recruiting'
-                  : 'completed';
-              const badgeText =
-                post.status === '모집중' || post.status === '여행중'
-                  ? '모집중'
-                  : '완료';
+              const statusValue = post.status as string;
+              const isRecruitOrTravel =
+                statusValue === '모집중' || statusValue === '여행중';
+              const displayStatus = isRecruitOrTravel
+                ? 'recruiting'
+                : 'completed';
+              const badgeText = isRecruitOrTravel ? '모집중' : '완료';
               const badgeColorClass =
                 displayStatus === 'completed' ? 'bg-gray-600' : 'bg-blue-600';
 
