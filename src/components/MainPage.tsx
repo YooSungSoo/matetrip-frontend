@@ -165,9 +165,7 @@ export function MainPage({
         );
 
         // '최신 동행 모집' 섹션에는 '모집중'인 글만 필터링하여 설정
-        const recruitingPosts = sortedInitialPosts.filter(
-          (post) => post.status === '모집중'
-        );
+        const recruitingPosts = sortedInitialPosts.filter(post => post.status === '모집중');
         setPosts(recruitingPosts);
         console.log(`최신 동행 글 목록`, sortedInitialPosts);
 

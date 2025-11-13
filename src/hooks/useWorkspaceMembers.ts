@@ -2,6 +2,21 @@ import { useState, useEffect } from 'react';
 import type { WorkspaceMember } from '../types/member';
 import { API_BASE_URL } from '../api/client.ts';
 
+const generateColorFromString = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xff; // 0-255
+    const darkValue = Math.floor(value * 0.7); // 0-178 범위로 조정하여 어두운 색상 유도
+    color += darkValue.toString(16).padStart(2, '0');
+  }
+  return color.toUpperCase();
+};
+
 interface UseWorkspaceMembersReturn {
   members: WorkspaceMember[];
   isLoading: boolean;
@@ -39,7 +54,12 @@ export function useWorkspaceMembers(
         }
 
         const data: WorkspaceMember[] = await response.json();
-        setMembers(data);
+        // 각 멤버에게 고유 색상을 할당합니다.
+        const membersWithColor = data.map((member) => ({
+          ...member,
+          color: generateColorFromString(member.id),
+        }));
+        setMembers(membersWithColor);
       } catch (e) {
         setError(
           e instanceof Error ? e : new Error('An unknown error occurred')

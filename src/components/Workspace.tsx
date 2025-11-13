@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import {
   DndContext,
@@ -8,7 +8,8 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { MapPanel, type KakaoPlace, type RouteSegment } from './MapPanel'; // RouteSegment import 추가
+import { MapPanel } from './MapPanel';
+import type { KakaoPlace, RouteSegment, ChatMessage } from '../types/map';
 import type { PlanDayDto } from '../types/workspace';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
@@ -58,6 +59,18 @@ export function Workspace({
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
+  const { members: membersWithoutColor } = useWorkspaceMembers(workspaceId);
+
+  // usePoiSocket에서 요구하는 color 속성을 멤버 객체에 추가합니다.
+  const members = useMemo(
+    () =>
+      membersWithoutColor.map((member) => ({
+        ...member,
+        color: generateColorFromString(member.id),
+      })),
+    [membersWithoutColor]
+  );
+  // usePoiSocket에서 모든 상태와 함수를 가져옵니다.
   const {
     pois,
     setPois,
@@ -67,24 +80,69 @@ export function Workspace({
     addSchedule,
     removeSchedule,
     reorderPois,
-  } = usePoiSocket(workspaceId);
+    cursors,
+    moveCursor,
+    hoveredPoiInfo,
+    hoverPoi,
+    clickEffects, // 추가
+    clickMap, // 추가
+  } = usePoiSocket(workspaceId, members);
   const {
     messages,
     sendMessage,
     isConnected: isChatConnected,
-  } = useChatSocket(workspaceId); // useChatSocket 훅 호출
-  const { members } = useWorkspaceMembers(workspaceId);
+  } = useChatSocket(workspaceId);
+
+  // [추가] MapPanel에 전달할 최신 채팅 메시지 상태
+  const [latestChatMessage, setLatestChatMessage] =
+    useState<ChatMessage | null>(null);
+
+  // [추가] messages 배열이 업데이트될 때마다 최신 메시지를 상태에 저장
+  const lastMessage =
+    messages.length > 0 ? messages[messages.length - 1] : null;
 
   const [selectedPlace, setSelectedPlace] = useState<KakaoPlace | null>(null);
   const [activePoi, setActivePoi] = useState<Poi | null>(null);
-  const [hoveredPoi, setHoveredPoi] = useState<Poi | null>(null); // hoveredPoi 상태 추가
   const mapRef = useRef<kakao.maps.Map>(null);
+  // [추가] 경로 최적화를 트리거하기 위한 상태
+  const [optimizingDayId, setOptimizingDayId] = useState<string | null>(null);
+  // [추가] 최적화 완료 후 상태를 리셋하는 콜백
+  const handleOptimizationComplete = useCallback(
+    () => setOptimizingDayId(null),
+    []
+  );
+  // [추가] 지도에 표시할 날짜 ID를 관리하는 상태
+  const [visibleDayIds, setVisibleDayIds] = useState<Set<string>>(new Set());
 
-  // MapPanel에서 전달받을 경로 세그먼트 정보를 저장할 상태 추가
-  const [routeSegmentsByDay, setRouteSegmentsByDay] = useState<
-    Record<string, RouteSegment[]>
-  >({});
+  // [추가] planDayDtos가 변경되면 visibleDayIds를 모든 날짜 ID로 초기화
+  useEffect(() => {
+    setVisibleDayIds(new Set(planDayDtos.map((day) => day.id)));
+  }, [planDayDtos]);
 
+  // [추가] 날짜 가시성 토글 핸들러
+  const handleDayVisibilityChange = useCallback((dayId: string, isVisible: boolean) => {
+    setVisibleDayIds(prevVisibleDayIds => {
+      const newVisibleDayIds = new Set(prevVisibleDayIds);
+      if (isVisible) {
+        newVisibleDayIds.add(dayId);
+      } else {
+        newVisibleDayIds.delete(dayId);
+      }
+      return newVisibleDayIds;
+    });
+  }, []);
+
+  // [수정] 패널 열기/닫기 시 지도 리렌더링을 위한 useEffect
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map) {
+      // 패널의 transition duration(300ms) 이후에 relayout을 호출합니다.
+      const timer = setTimeout(() => {
+        map.relayout();
+      }, 310); // transition 시간보다 약간 길게 설정
+      return () => clearTimeout(timer);
+    }
+  }, [isLeftPanelOpen, isRightPanelOpen]);
   // PlanRoomHeader에 전달할 activeMembers 데이터 형식으로 변환
   const activeMembersForHeader = useMemo(() => {
     return members.map((member) => ({
@@ -97,6 +155,30 @@ export function Workspace({
         : `https://ui-avatars.com/api/?name=${member.profile.nickname}&background=random`,
     }));
   }, [members]);
+
+  // MapPanel에서 전달받을 경로 세그먼트 정보를 저장할 상태 추가
+  const [routeSegmentsByDay, setRouteSegmentsByDay] = useState<
+    Record<string, RouteSegment[]>
+  >({});
+
+  // [추가] 마지막 메시지가 변경될 때만 실행되는 useEffect
+  // 이렇게 하면 메시지 배열 전체가 아닌, 마지막 메시지가 바뀔 때만 반응합니다.
+  // RightPanel에서 받은 메시지 타입과 MapPanel에서 사용할 ChatMessage 타입을 맞춰줍니다.
+  useMemo(() => {
+    // lastMessage와 lastMessage.userId가 모두 존재해야 합니다. (시스템 메시지 제외)
+    if (lastMessage && lastMessage.userId && activeMembersForHeader) {
+      // [추가] 메시지를 보낸 사용자의 정보를 activeMembersForHeader에서 찾습니다.
+      const sender = activeMembersForHeader.find(
+        (member) => member.id === lastMessage.userId
+      );
+
+      setLatestChatMessage({
+        userId: lastMessage.userId, // 메시지를 보낸 사용자의 ID
+        message: lastMessage.message, // 메시지 내용
+        avatar: sender?.avatar, // [추가] 찾은 사용자의 아바타 URL
+      });
+    }
+  }, [lastMessage, activeMembersForHeader]); // [수정] activeMembersForHeader를 의존성 배열에 추가
 
   const dayLayers = useMemo(
     () =>
@@ -135,12 +217,10 @@ export function Workspace({
     map.panTo(moveLatLon);
   };
 
-  const handlePoiHover = useCallback((poi: Poi) => {
-    setHoveredPoi(poi);
-  }, []);
-
-  const handlePoiLeave = useCallback(() => {
-    setHoveredPoi(null);
+  // [추가] LeftPanel에서 경로 최적화 버튼 클릭 시 호출될 핸들러
+  const handleOptimizeRoute = useCallback((dayId: string) => {
+    console.log(`[Workspace] Optimization triggered for day: ${dayId}`);
+    setOptimizingDayId(dayId);
   }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -320,26 +400,29 @@ export function Workspace({
     ]
   );
 
-  const handleMapPoiDragEnd = useCallback(
-    (poiId: string, lat: number, lng: number) => {
-      setPois((currentPois) =>
-        currentPois.map((poi) =>
-          poi.id === poiId ? { ...poi, latitude: lat, longitude: lng } : poi
-        )
-      );
-      // TODO: Call a socket event to persist the new coordinates.
-      // For now, only local state is updated.
-      console.log(`POI ${poiId} dragged to Lat: ${lat}, Lng: ${lng}`);
-    },
-    [setPois]
-  );
-
   // MapPanel로부터 경로 정보를 받아 상태를 업데이트하는 콜백 함수
   const handleRouteInfoUpdate = useCallback(
     (newRouteInfo: Record<string, RouteSegment[]>) => {
       setRouteSegmentsByDay(newRouteInfo);
     },
     []
+  );
+
+  // [추가] MapPanel로부터 최적화된 경로 순서를 받아 처리하는 콜백 함수
+  const handleRouteOptimized = useCallback(
+    (dayId: string, optimizedPoiIds: string[]) => {
+      const currentPois = itinerary[dayId]?.map((p) => p.id) || [];
+      // 현재 순서와 API가 제안한 최적 순서가 다를 경우에만 업데이트
+      if (JSON.stringify(currentPois) !== JSON.stringify(optimizedPoiIds)) {
+        console.log(
+          `Route optimized for day ${dayId}. Applying new order:`,
+          optimizedPoiIds
+        );
+        // reorderPois를 호출하여 서버와 다른 클라이언트에 변경사항 전파
+        reorderPois(dayId, optimizedPoiIds);
+      }
+    },
+    [itinerary, reorderPois]
   );
 
   return (
@@ -373,9 +456,12 @@ export function Workspace({
             removeSchedule={removeSchedule}
             onPlaceClick={setSelectedPlace}
             onPoiClick={handlePoiClick}
-            onPoiHover={handlePoiHover} // LeftPanel에 hover 핸들러 전달
-            onPoiLeave={handlePoiLeave} // LeftPanel에 leave 핸들러 전달
+            onPoiHover={hoverPoi} // LeftPanel에 hover 핸들러 전달
+            onPoiLeave={() => hoverPoi(null)} // onPoiLeave 핸들러 추가
+            onOptimizeRoute={handleOptimizeRoute} // [추가] 최적화 핸들러 전달
             routeSegmentsByDay={routeSegmentsByDay} // LeftPanel에 경로 정보 전달
+            visibleDayIds={visibleDayIds} // [추가] 가시성 상태 전달
+            onDayVisibilityChange={handleDayVisibilityChange} // [추가] 가시성 변경 핸들러 전달
           />
 
           <button
@@ -400,10 +486,20 @@ export function Workspace({
               unmarkPoi={unmarkPoi}
               selectedPlace={selectedPlace}
               mapRef={mapRef}
-              onPoiDragEnd={handleMapPoiDragEnd}
               setSelectedPlace={setSelectedPlace}
               onRouteInfoUpdate={handleRouteInfoUpdate} // MapPanel에 콜백 함수 전달
-              hoveredPoi={hoveredPoi}
+              hoveredPoiInfo={hoveredPoiInfo} // hoveredPoi 대신 hoveredPoiInfo 전달
+              optimizingDayId={optimizingDayId} // [추가] 최적화 트리거 상태 전달
+              onOptimizationComplete={handleOptimizationComplete} // [추가] 최적화 완료 콜백 전달
+              onRouteOptimized={handleRouteOptimized} // [추가] 최적화된 경로 콜백 전달
+              latestChatMessage={latestChatMessage} // [추가] 최신 채팅 메시지 전달
+              workspaceId={workspaceId}
+              members={members}
+              cursors={cursors} // cursors prop 전달
+              moveCursor={moveCursor} // moveCursor prop 전달
+              clickEffects={clickEffects} // clickEffects prop 전달
+              clickMap={clickMap} // clickMap prop 전달
+              visibleDayIds={visibleDayIds} // [추가] 가시성 상태 전달
             />
           </div>
 
