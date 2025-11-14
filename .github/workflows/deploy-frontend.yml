@@ -1,0 +1,53 @@
+name: Deploy Frontend to S3
+
+on:
+  push:
+    branches:
+      - main          # main 브랜치에 푸시될 때마다 배포
+  workflow_dispatch:  # 필요하면 수동 실행도 가능
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'      # 프로젝트 Node 버전에 맞게 수정 가능
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        # package-lock.json 없으면 npm install 사용
+
+      - name: Build frontend
+        run: npm run build        # Vite → dist/ 생성
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Sync dist to S3
+        run: |
+          # 정적 자산 (캐시 길게)
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }}/ \
+            --delete \
+            --exclude "index.html" \
+            --cache-control "public, max-age=31536000"
+
+          # index.html은 캐시 없이 (새 배포 바로 반영)
+          aws s3 cp dist/index.html s3://${{ secrets.S3_BUCKET }}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Create CloudFront invalidation
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
