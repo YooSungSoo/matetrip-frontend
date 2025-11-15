@@ -210,7 +210,7 @@ export function WorkspaceCard({
         {/* 커버 이미지 */}
         <div className="h-[252px] rounded-2xl overflow-hidden relative">
           <ImageWithFallback
-            src={coverImage}
+            src={coverImageUrl ?? defaultCoverImage}
             alt={title}
             className="w-full h-full object-cover"
           />
@@ -252,14 +252,6 @@ export function WorkspaceCard({
           {status === '모집중' ? '모집중' : '모집완료'}
         </Badge>
       )}
-
-      {/* 커버 이미지 */}
-      <div className="h-48 overflow-hidden flex-shrink-0">
-        <ImageWithFallback
-          src={coverImageUrl ?? defaultCoverImage}
-          alt={title}
-          className="w-full h-full object-cover"
-        />
       </div>
 
       {/* 콘텐츠 */}
@@ -286,56 +278,35 @@ export function WorkspaceCard({
         </div>
       </div>
 
-        {/* 여행 키워드 */}
-        {keywords && keywords.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-2">
-            {keywords.map((keyword, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                #{translateKeyword(keyword)}
-              </Badge>
-            ))}
-          </div>
-        )}
+      {/* 참여자 정보 */}
+      <div className="flex items-center gap-2 px-2">
+        {/* 참여자 프로필 이미지 (중첩) */}
+        <div className="flex -space-x-8">
+          {displayParticipants.slice(0, 3).map((participant, index) => {
+            if (!participant) return null;
 
-        {/* 참여자 목록 */}
-        <div className="pt-4 border-t mt-auto">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="flex -space-x-2 flex-shrink-0">
-                {displayParticipants.slice(0, 3).map((participant, index) => {
-                  if (!participant) return null;
+            const resolvedUrl = participant.profileImageId
+              ? profileImageUrls[participant.profileImageId]
+              : undefined;
 
-                  const resolvedUrl = participant.profileImageId
-                    ? profileImageUrls[participant.profileImageId]
-                    : undefined;
-
-                  // if (participant.profileImageId) {
-                  //   console.log(
-                  //     'WorkspaceCard profile image URL',
-                  //     participant.profileImageId,
-                  //     resolvedUrl
-                  //   );
-                  // }
-
-                  return (
-                    <ImageWithFallback
-                      key={participant.id}
-                      src={resolvedUrl ?? participant.fallback}
-                      alt={participant.name}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-white"
-                      style={{ zIndex: displayParticipants.length - index }}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex items-center gap-1 text-gray-500 text-sm">
-                <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">
-                  {displayParticipants.length}/{maxParticipants || 0}명 모집중
-                </span>
-              </div>
-            </div>
-          </div>
+            return (
+              <ImageWithFallback
+                key={participant.id}
+                src={resolvedUrl ?? participant.fallback}
+                alt={participant.name}
+                className="w-8 h-8 rounded-full object-cover"
+                style={{ zIndex: displayParticipants.length - index }}
+              />
+            );
+          })}
+        </div>
+        
+        {/* 모집 인원 */}
+        <div className="flex items-center gap-1">
+          <Users className="w-6 h-6 text-[#4e4a65]" />
+          <span className="text-xs font-medium text-[#4e4a65]">
+            {displayParticipants.length}/{maxParticipants || 0}명 모집중
+          </span>
         </div>
       </div>
 

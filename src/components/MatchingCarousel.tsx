@@ -46,7 +46,7 @@ export function MatchingCarousel({
       if (api) {
         api.scrollNext();
       }
-    }, 5000); // 5초마다 자동 스크롤
+    }, 7000); // 5초마다 자동 스크롤
   };
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export function MatchingCarousel({
         {posts.map((post, index) => (
           <CarouselItem
             key={post.id}
-            className="pl-6 md:basis-1/2 lg:basis-[40%]"
+            className="pl-6 md:basis-1/2 lg:basis-[34%]"
           >
             <MatchingCard
               post={post}

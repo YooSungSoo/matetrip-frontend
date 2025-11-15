@@ -1,12 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  MapPin,
-  ClipboardList,
-  Plus,
-  Info,
-  Sparkles,
-  Wand2,
-} from 'lucide-react';
+import { MapPin, SlidersHorizontal, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client';
@@ -14,7 +7,7 @@ import { type Post } from '../types/post';
 import { MainPostCardSkeleton } from './MainPostCardSkeleton';
 import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
-import type { MatchingInfo } from '../types/matching';
+import type { MatchingInfo, MatchCandidateDto } from '../types/matching';
 
 interface MainPageProps {
   onSearch: (params: {
@@ -134,15 +127,14 @@ export function MainPage({
   isLoggedIn,
 }: MainPageProps) {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Single loading state for both sections
-  const { user, isAuthLoading } = useAuthStore(); // Get user and isAuthLoading from auth store
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthLoading } = useAuthStore();
   const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
   const [isMatchesLoading, setIsMatchesLoading] = useState(true);
   const [featuredView, setFeaturedView] = useState<'latest' | 'recommended'>(
     'latest'
   );
-     const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -176,11 +168,9 @@ export function MainPage({
     fetchAllPosts();
   }, [isAuthLoading, fetchTrigger]);
 
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      onSearch({ title: searchQuery });
+  useEffect(() => {
+    if (isAuthLoading || !isLoggedIn || !user?.userId) {
+      return;
     }
 
     let isMounted = true;
@@ -188,10 +178,10 @@ export function MainPage({
     const fetchMatches = async () => {
       setIsMatchesLoading(true);
       try {
-        const res = await client.post<MatchCandidateDto[]>( //응답타입
+        const res = await client.post<MatchCandidateDto[]>(
           '/profile/matching/search',
           {
-            limit: 5, //BODY
+            limit: 5,
           }
         );
         if (!isMounted) {
@@ -218,16 +208,6 @@ export function MainPage({
       isMounted = false;
     };
   }, [isAuthLoading, isLoggedIn, user?.userId]);
-
-  // const handleSearch = (e: React.FormEvent) => {
-  //   e?.preventDefault();
-  //   onSearch({
-  //     startDate: searchStartDate,
-  //     endDate: searchEndDate,
-  //     location: searchLocation,
-  //     title: searchTitle,
-  //   });
-  // };
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -297,29 +277,27 @@ export function MainPage({
   const activeFeaturedView =
     featuredView === 'recommended' && isLoggedIn ? 'recommended' : 'latest';
 
-  const featuredTitle =
-    activeFeaturedView === 'recommended' && user
-      ? `${user?.profile.nickname}님과 성향이 비슷한 유저들이 동행을 구하고 있어요`
-      : '최신 동행 모집';
-
   const isFeaturedLoading =
     activeFeaturedView === 'recommended' ? isMatchesLoading : isLoading;
 
   const featuredItems =
     activeFeaturedView === 'recommended' ? recommendedPosts : posts;
 
-  const featuredEmptyMessage =
-    activeFeaturedView === 'recommended'
-      ? '추천할 게시글이 없습니다.'
-      : '최신 게시글이 없습니다.';
-
-  const handleFeaturedViewChange = (view: 'latest' | 'recommended') => {
-    if (view === 'recommended' && !isLoggedIn) {
-      return;
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      onSearch({ title: searchQuery });
     }
-    setFeaturedView(view);
   };
   
+  const handleCardClick = (post: Post) => {
+    if (!isLoggedIn) {
+      window.location.href = '/login';
+      return;
+    }
+    onViewPost(post.id);
+  };
+
   return (
     <div className="bg-white min-h-screen">
       <div className="max-w-7xl mx-auto px-16 py-12">
@@ -333,77 +311,86 @@ export function MainPage({
           </p>
         </div>
 
-        {!isLoggedIn ? (
-          /* 로그인하지 않은 사용자를 위한 안내 */
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="bg-white rounded-lg shadow-lg p-12 max-w-md text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <MapPin className="w-10 h-10 text-blue-600" />
+        {/* Search Bar and Filters - 로그인한 사용자에게만 표시 */}
+        {isLoggedIn && (
+          <div className="mb-10 flex items-center gap-3">
+            <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="여행지, 관심사, 여행 스타일로 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                로그인이 필요한 서비스입니다
-              </h2>
-              <p className="text-gray-600 mb-8 leading-relaxed">
-                AI가 추천하는 최적의 여행 파트너를 만나려면
-                <br />
-                로그인이 필요합니다.
-                <br />
-                <br />
-                로그인 후 당신에게 딱 맞는 동행을 찾아보세요!
-              </p>
+            </form>
+            <Button
+              variant="outline"
+              className="gap-2 px-6 py-3 h-auto border-gray-200"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+              Filters
+            </Button>
+          </div>
+        )}
+
+        {/* 로그인하지 않은 사용자를 위한 안내 배너 */}
+        {!isLoggedIn && (
+          <div className="mb-8 bg-gradient-to-r from-blue-50 to-pink-50 rounded-2xl p-6 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    AI 맞춤 추천을 받아보세요
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    로그인하면 당신에게 딱 맞는 동행을 AI가 추천해드려요
+                  </p>
+                </div>
+              </div>
               <Button
                 onClick={() => window.location.href = '/login'}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6"
               >
-                로그인하러 가기
+                로그인하기
               </Button>
             </div>
           </div>
-        ) : (
-          <>
-            {/* Search Bar and Filters */}
-            <div className="mb-10 flex items-center gap-3">
-              <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="여행지, 관심사, 여행 스타일로 검색..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </form>
-              <Button
-                variant="outline"
-                className="gap-2 px-6 py-3 h-auto border-gray-200"
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-                Filters
-              </Button>
-            </div>
-
-            {/* Recommended Posts Section */}
-            <section className="mb-12">
-              <h2 className="text-xl font-medium text-gray-900 mb-6">AI 추천 동행</h2>
-              {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <MainPostCardSkeleton key={index} />
-                  ))}
-                </div>
-              </div>
-              {isRecommendedView && (
-                <p className="text-sm font-medium text-blue-900/80 flex items-center gap-1">
-                  <Sparkles className="w-4 h-4 text-pink-500" />
-                  여행 성향·스타일·프로필 취향·MBTI를 모두 반영한 맞춤 추천
-                  리스트예요.
-                </p>
-              )}
-            </section>
-          </>
         )}
+
+        {/* Recommended Posts Section - 모든 사용자에게 표시 */}
+        <section className="mb-12">
+          <h2 className="text-xl font-medium text-gray-900 mb-6">AI 추천 동행</h2>
+          {isFeaturedLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <MainPostCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : featuredItems.length === 0 ? (
+            <div className="text-center text-gray-500 py-10">
+              추천할 동행이 없습니다.
+            </div>
+          ) : (
+            <MatchingCarousel
+              posts={featuredItems.slice(0, 10)}
+              matchingInfoByPostId={
+                activeFeaturedView === 'recommended'
+                  ? matchingInfoByPostId
+                  : featuredItems.slice(0, 10).reduce((acc, post, index) => {
+                      acc[post.id] = generateMockMatchingInfo(index);
+                      return acc;
+                    }, {} as Record<string, MatchingInfo>)
+              }
+              onCardClick={handleCardClick}
+            />
+          )}
+        </section>
 
         {/* Region Categories Section */}
         <section>
