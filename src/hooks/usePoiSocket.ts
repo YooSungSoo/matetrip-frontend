@@ -116,7 +116,7 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
   );
 
   useEffect(() => {
-    const socket = io(`${WEBSOCKET_POI_URL}/poi`, {  path: '/ws/poi/socket.io',transports: ['websocket'] });
+    const socket = io(`${WEBSOCKET_POI_URL}/poi`, {  path: '/ws/poi',transports: ['websocket'] });
     socketRef.current = socket;
 
     const handleSync = (payload: { pois: Poi[] }) => {
