@@ -9,7 +9,7 @@ import {
   Polyline,
 } from 'react-kakao-maps-sdk';
 import { Button } from './ui/button';
-import { KAKAO_REST_API_KEY } from '../constants';
+import { AI_SERVER_URL, KAKAO_REST_API_KEY } from '../constants';
 import { fetchPlacesInBounds } from '../api/places';
 import { usePlaceStore } from '../store/placeStore';
 import type { PlaceDto } from '../types/place';
@@ -381,12 +381,12 @@ const PlaceMarker = memo(
           `;
           break;
 
-          default:
-            // 기본 아이콘 - 위치 핀
-            iconSvg = `
+        default:
+          // 기본 아이콘 - 위치 핀
+          iconSvg = `
               <circle cx="16" cy="16" r="6" fill="white"/>
             `;
-          }
+      }
 
       // SVG로 마커 이미지 생성 (데이터 URI 방식)
       const svg = `
@@ -1068,94 +1068,64 @@ export function MapPanel({
     const optimizeRoute = async () => {
       const dayPois = itinerary[optimizingDayId];
       if (!dayPois || dayPois.length < 4) {
-        // 출발, 도착, 경유지 2개 이상
-        console.warn('[TSP] Not enough POIs to optimize.');
+        console.warn(
+          `[Optimization] Not enough POIs to optimize for day ${optimizingDayId}. Need at least 4.`
+        );
         onOptimizationComplete?.();
         return;
       }
 
-      // 두 지점 간의 경로 정보를 가져오는 함수
-      const fetchDuration = async (
-        from: Poi,
-        to: Poi
-      ): Promise<{
-        from: string;
-        to: string;
-        duration: number;
-        distance: number;
-      } | null> => {
-        try {
-          // [수정] GET 요청으로 변경하고, 파라미터를 URL 쿼리 스트링으로 전달합니다.
-          const response = await fetch(
-            `https://apis-navi.kakaomobility.com/v1/directions?origin=${from.longitude},${from.latitude}&destination=${to.longitude},${to.latitude}&priority=TIME&summary=true`,
-            {
-              method: 'GET',
-              headers: {
-                Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
-              },
-            }
-          );
-          if (!response.ok) return null;
-          const data = await response.json();
-          if (data.routes && data.routes[0] && data.routes[0].summary) {
-            return {
-              from: from.id,
-              to: to.id,
-              duration: data.routes[0].summary.duration,
-              distance: data.routes[0].summary.distance,
-            };
-          }
-          return null;
-        } catch (error) {
-          console.error(
-            `Error fetching duration between ${from.placeName} and ${to.placeName}:`,
-            error
-          );
-          return null;
-        }
-      };
+      // [추가] 최적화할 POI들의 이름을 로그로 출력합니다.
+      console.log(
+        '[Optimization] POIs to be optimized:',
+        dayPois.map((p) => p.placeName)
+      );
 
       try {
-        const originPoi = dayPois[0];
-        const destinationPoi = dayPois[dayPois.length - 1];
-        const waypoints = dayPois.slice(1, dayPois.length - 1);
+        // API에 보낼 poi_list를 구성합니다.
+        const poi_list = dayPois.map((poi) => ({
+          id: poi.id,
+          latitude: poi.latitude,
+          longitude: poi.longitude,
+        }));
+
+        const payload = { poi_list };
         console.log(
-          `[TSP] Starting optimization for day ${optimizingDayId} with ${waypoints.length} waypoints.`
+          `[Optimization] Calling API for day ${optimizingDayId} with payload:`,
+          payload
         );
-        const allPoints = [originPoi, ...waypoints, destinationPoi];
-        const promises: ReturnType<typeof fetchDuration>[] = [];
 
-        // 1. 모든 지점 쌍(pair)에 대한 API 호출 Promise 생성
-        for (let i = 0; i < allPoints.length; i++) {
-          for (let j = 0; j < allPoints.length; j++) {
-            if (i === j) continue;
-            promises.push(fetchDuration(allPoints[i], allPoints[j]));
-          }
-        }
-
-        console.log(`[TSP] Created ${promises.length} API call promises.`);
-
-        // 2. Promise.all로 모든 API를 병렬 호출
-        const results = await Promise.all(promises);
-
-        // 3. 결과로 이동 시간 행렬(Matrix) 생성
-        const durationMatrix: Record<string, Record<string, number>> = {};
-        results.forEach((result) => {
-          if (result) {
-            if (!durationMatrix[result.from]) durationMatrix[result.from] = {};
-            durationMatrix[result.from][result.to] = result.duration;
-          }
+        const response = await fetch(`${AI_SERVER_URL}/optimization/route`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
         });
 
-        console.log('[TSP] Duration Matrix created:', durationMatrix);
+        if (!response.ok) {
+          throw new Error(`API call failed with status: ${response.status}`);
+        }
 
-        // --- 여기부터는 생성된 durationMatrix를 TSP 솔버에 전달하는 부분 ---
-        // 예시: console.log만 하고, 실제 솔버 연동은 서버에서 수행하는 것을 권장합니다.
-        // const optimizedOrder = await solveTspOnServer(durationMatrix, originPoi.id, destinationPoi.id);
-        // onRouteOptimized?.(optimizingDayId, optimizedOrder);
+        const result = await response.json();
+        console.log('[Optimization] API Response:', result);
+
+        // API 응답에서 최적화된 POI ID 순서를 추출하여 부모 컴포넌트로 전달합니다.
+        if (result.ids && onRouteOptimized) {
+          // [추가] 최적화된 순서에 해당하는 POI 이름을 로그로 출력합니다.
+          const optimizedPoiNames = result.ids.map(
+            (id: string) => dayPois.find((p) => p.id === id)?.placeName
+          );
+          console.log(
+            '[Optimization] Optimized POI order (names):',
+            optimizedPoiNames
+          );
+
+          onRouteOptimized(optimizingDayId, result.ids);
+        }
       } catch (error) {
         console.error(
-          `[TSP] Error during optimization for day ${optimizingDayId}:`,
+          `[Optimization] Error during optimization for day ${optimizingDayId}:`,
           error
         );
       } finally {

@@ -1,5 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import html2canvas from 'html2canvas-pro';
+import jsPDF from 'jspdf';
 import {
   DndContext,
   DragOverlay,
@@ -19,6 +21,7 @@ import { type Poi, usePoiSocket } from '../hooks/usePoiSocket.ts';
 import { useChatSocket } from '../hooks/useChatSocket'; // useChatSocket import 추가
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers.ts';
 import { API_BASE_URL } from '../api/client.ts';
+import { PdfDocument } from './PdfDocument';
 import { CATEGORY_INFO, type PlaceDto } from '../types/place.ts'; // useWorkspaceMembers 훅 import
 
 interface WorkspaceProps {
@@ -60,6 +63,10 @@ export function Workspace({
 }: WorkspaceProps) {
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+
+  // PDF 생성을 위한 상태와 ref
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   const { members: membersWithoutColor } = useWorkspaceMembers(workspaceId);
 
@@ -223,6 +230,89 @@ export function Workspace({
     );
     map.panTo(moveLatLon);
   };
+
+  // PDF 내보내기 버튼 클릭 핸들러
+  const handleExportToPdf = useCallback(() => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true); // PDF 생성 시작을 알림
+  }, [isGeneratingPdf]);
+
+  // isGeneratingPdf 상태가 true로 변경되면 PDF 생성 로직을 실행
+  useEffect(() => {
+    if (!isGeneratingPdf) return;
+
+    const generatePdf = async () => {
+      // ref가 준비될 때까지 잠시 기다립니다.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      if (!pdfRef.current) {
+        alert('PDF 생성에 실패했습니다: 문서를 찾을 수 없습니다.');
+        setIsGeneratingPdf(false);
+        return;
+      }
+
+      const element = pdfRef.current;
+      try {
+        // 지도 타일이 로드될 시간을 추가로 기다립니다.
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const images = Array.from(element.querySelectorAll('img'));
+        const crossOriginImages = images.filter(
+          (img) =>
+            img.src &&
+            (img.src.includes('daumcdn.net') ||
+              img.src.includes('kakaocdn.net'))
+        );
+
+        const promises = crossOriginImages.map((img) => {
+          return new Promise<void>((resolve) => {
+            const originalSrc = img.src;
+            if (originalSrc.startsWith('data:')) {
+              resolve();
+              return;
+            }
+            const proxyUrl = `${API_BASE_URL}/proxy/image?url=${encodeURIComponent(
+              originalSrc
+            )}`;
+
+            const newImg = new Image();
+            newImg.crossOrigin = 'Anonymous';
+            newImg.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = newImg.naturalWidth;
+              canvas.height = newImg.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(newImg, 0, 0);
+              img.src = canvas.toDataURL('image/png');
+              resolve();
+            };
+            newImg.onerror = () => {
+              console.error(`프록시 이미지 로드 실패: ${originalSrc}`);
+              resolve();
+            };
+            newImg.src = proxyUrl;
+          });
+        });
+
+        await Promise.all(promises);
+
+        const canvas = await html2canvas(element, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${workspaceName}_여행계획.pdf`);
+      } catch (error) {
+        console.error('PDF 생성 중 오류가 발생했습니다.', error);
+        alert('PDF 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      } finally {
+        setIsGeneratingPdf(false); // 성공/실패 여부와 관계없이 상태를 리셋
+      }
+    };
+
+    generatePdf();
+  }, [isGeneratingPdf, workspaceName, itinerary, dayLayers, routeSegmentsByDay]);
 
   // [추가] LeftPanel에서 경로 최적화 버튼 클릭 시 호출될 핸들러
   const handleOptimizeRoute = useCallback((dayId: string) => {
@@ -403,7 +493,10 @@ export function Workspace({
     (dayId: string, optimizedPoiIds: string[]) => {
       const currentPois = itinerary[dayId]?.map((p) => p.id) || [];
       // 현재 순서와 API가 제안한 최적 순서가 다를 경우에만 업데이트
-      if (JSON.stringify(currentPois) !== JSON.stringify(optimizedPoiIds)) {
+      if (
+        JSON.stringify(currentPois) !== JSON.stringify(optimizedPoiIds) &&
+        optimizedPoiIds.length > 0
+      ) {
         console.log(
           `Route optimized for day ${dayId}. Applying new order:`,
           optimizedPoiIds
@@ -471,6 +564,8 @@ export function Workspace({
           onExit={onEndTrip}
           onBack={onEndTrip}
           isOwner={true}
+          onExportPdf={handleExportToPdf}
+          isGeneratingPdf={isGeneratingPdf}
           activeMembers={activeMembersForHeader}
         />
 
@@ -554,6 +649,19 @@ export function Workspace({
       <DragOverlay>
         {activePoi ? <DraggablePoiItem poi={activePoi} /> : null}
       </DragOverlay>
+
+      {/* PDF 생성 시에만 렌더링되는 숨겨진 문서 */}
+      {isGeneratingPdf && (
+        <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+          <PdfDocument
+            ref={pdfRef}
+            workspaceName={workspaceName}
+            itinerary={itinerary}
+            dayLayers={dayLayers}
+            routeSegmentsByDay={routeSegmentsByDay}
+          />
+        </div>
+      )}
     </DndContext>
   );
 }

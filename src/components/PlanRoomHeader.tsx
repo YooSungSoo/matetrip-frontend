@@ -4,6 +4,8 @@ import {
   Calendar,
   CheckCircle,
   DoorOpen,
+  FileDown,
+  Loader2,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -35,6 +37,8 @@ interface PlanRoomHeaderProps {
   onBack: () => void;
   isOwner?: boolean;
   activeMembers?: Member[];
+  onExportPdf?: () => void;
+  isGeneratingPdf?: boolean;
 }
 
 export function PlanRoomHeader({
@@ -47,6 +51,8 @@ export function PlanRoomHeader({
   onBack,
   isOwner = false,
   activeMembers = [],
+  onExportPdf,
+  isGeneratingPdf = false,
 }: PlanRoomHeaderProps) {
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
   const { user } = useAuthStore();
@@ -114,6 +120,20 @@ export function PlanRoomHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={onExportPdf} disabled={isGeneratingPdf}>
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <span>PDF 생성 중...</span>
+                </>
+              ) : (
+                <>
+                  <FileDown className="w-5 h-5 mr-2" />
+                  <span>PDF로 내보내기</span>
+                </>
+              )}
+            </DropdownMenuItem>
+
             {isOwner && (
               <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                 <CheckCircle className="w-5 h-5 mr-2" />
