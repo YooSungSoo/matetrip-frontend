@@ -99,7 +99,7 @@ export function useChatSocket(workspaceId: string) {
     }
 
     const socket = io(`${WEBSOCKET_CHAT_URL}/chat`, {
-      path: '/ws/chat/socket.io',
+      path: '/ws/chat',
       transports: ['websocket'],
       query: { workspaceId, username }, // 초기 연결 시 쿼리 파라미터로 전달
     });
