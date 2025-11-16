@@ -383,12 +383,25 @@ const PlaceMarker = memo(
           `;
           break;
 
-        default:
-          // 기본 아이콘 - 위치 핀
+        case '음식': // 음식 - 식기 아이콘
           iconSvg = `
+            <g transform="translate(20, 18)">
+              <!-- 포크 -->
+              <path d="M-5,-6 L-5,-1 M-6.5,-6 L-6.5,-2 C-6.5,-1 -5.5,-1 -5,-1 M-3.5,-6 L-3.5,-2 C-3.5,-1 -4.5,-1 -5,-1 M-5,-1 L-5,6"
+                    stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- 나이프 -->
+              <path d="M3,-6 L3,6 M3,-6 L5,-5 L5,-3 L3,-2"
+                    stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          `;
+          break;
+
+          default:
+            // 기본 아이콘 - 위치 핀
+            iconSvg = `
               <circle cx="16" cy="16" r="6" fill="white"/>
             `;
-      }
+          }
 
       // SVG로 마커 이미지 생성 (데이터 URI 방식)
       const svg = `

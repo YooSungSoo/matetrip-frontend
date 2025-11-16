@@ -21,10 +21,11 @@ export const CATEGORY_INFO = {
   추천코스: { name: '추천코스', color: '#E91E63' }, // 선명한 핑크색 (Pink)
   자연: { name: '자연', color: '#4CAF50' }, // 선명한 녹색 (Green)
   숙박: { name: '숙박', color: '#74B9FF' },
+  음식: { name: '음식점', color: '#FF6B6B' }, // 밝은 빨간색 (Red)
   기타: { name: '기타', color: '#9E9E9E' }, // 회색 (Grey)
 } as const;
 
-// 카테고리 : 레포츠, 추천코스, 인문(문화/예술/역사), 자연, 숙박
+// 카테고리 : 레포츠, 추천코스, 인문(문화/예술/역사), 자연, 숙박, 음식점
 
 export type CategoryCode = keyof typeof CATEGORY_INFO;
 
