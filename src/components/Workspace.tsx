@@ -121,6 +121,7 @@ export function Workspace({
     clickEffects, // 추가
     clickMap, // 추가
     addRecommendedPoisToDay,
+    focusPlace, // 추가
   } = usePoiSocket(workspaceId, members);
 
   const {
@@ -292,9 +293,10 @@ export function Workspace({
       }
 
       // FIX: markPoi에 필요한 데이터만 추출하여 전달
-      const { latitude, longitude, address, placeName, categoryName } =
+      const { placeId, latitude, longitude, address, placeName, categoryName } =
         poiToAdd;
       const poiToCreate = {
+        placeId,
         latitude,
         longitude,
         address,
@@ -805,6 +807,7 @@ export function Workspace({
               clickMap={clickMap} // clickMap prop 전달
               visibleDayIds={visibleDayIds} // [추가] 가시성 상태 전달
               initialCenter={initialMapCenter} // [신규] 초기 지도 중심 좌표 전달
+              focusPlace={focusPlace} // [추가] focusPlace 전달
             />
           </div>
 
@@ -826,7 +829,6 @@ export function Workspace({
             sendMessage={sendMessage}
             isChatConnected={isChatConnected}
             workspaceId={workspaceId}
-            markPoi={markPoi}
             onAddPoiToItinerary={handleAddRecommendedPoi} // [신규] 일정 추가 모달 핸들러 전달
             onCardClick={handlePoiClick} // [신규] 지도 이동 핸들러 전달
           />

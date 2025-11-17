@@ -18,6 +18,7 @@ export function RecommendedPlaceCard({
     // AiPlace를 Poi 타입과 유사하게 변환하여 전달
     const poiForModal: Poi = {
       id: place.id,
+      placeId: place.id, // 추가 : placeId 필수로 변경되서
       placeName: place.title,
       address: place.address,
       latitude: place.latitude,

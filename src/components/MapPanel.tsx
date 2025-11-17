@@ -10,7 +10,6 @@ import {
 } from 'react-kakao-maps-sdk';
 import { Button } from './ui/button';
 import { AI_SERVER_URL, KAKAO_REST_API_KEY } from '../constants';
-import { fetchPlacesInBounds } from '../api/places';
 import { usePlaceStore } from '../store/placeStore';
 import type { PlaceDto } from '../types/place';
 import { CATEGORY_INFO } from '../types/place';
@@ -66,6 +65,7 @@ interface MapPanelProps {
   clickMap: (position: { lat: number; lng: number }) => void;
   visibleDayIds: Set<string>;
   initialCenter: { lat: number; lng: number } | null;
+  focusPlace: (bounds: { southWestLatitude: number; southWestLongitude: number; northEastLatitude: number; northEastLongitude: number }, callback: (places: any[]) => void) => void;
 }
 
 export interface PlaceMarkerProps {
@@ -210,6 +210,7 @@ const PlaceInfoWindow = memo(
                 unmarkPoi(markedPoi.id);
               } else {
                 markPoi({
+                  placeId: place.id,
                   latitude: place.latitude,
                   longitude: place.longitude,
                   address: place.address,
@@ -715,6 +716,7 @@ export function MapPanel({
   clickMap, // props로 받음
   visibleDayIds, // props로 받음
   initialCenter, // props로 받음
+  focusPlace, // [추가] focusPlace prop
 }: MapPanelProps) {
   const defaultCenter = { lat: 33.450701, lng: 126.570667 }; // 제주도 기본 위치
   const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
@@ -810,7 +812,7 @@ export function MapPanel({
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   /**
-   * 지도 영역 내의 장소 데이터를 가져오는 함수
+   * 지도 영역 내의 장소 데이터를 가져오는 함수 (WebSocket 기반)
    */
   const fetchPlacesInView = useCallback(
     async (map: kakao.maps.Map) => {
@@ -820,21 +822,22 @@ export function MapPanel({
         const ne = bounds.getNorthEast(); // 북동쪽 좌표
 
         const mapBounds = {
-          swLat: sw.getLat(),
-          swLng: sw.getLng(),
-          neLat: ne.getLat(),
-          neLng: ne.getLng(),
+          southWestLatitude: sw.getLat(),
+          southWestLongitude: sw.getLng(),
+          northEastLatitude: ne.getLat(),
+          northEastLongitude: ne.getLng(),
         };
 
-        console.log('Fetching places for bounds:', mapBounds);
-        const placesData = await fetchPlacesInBounds(mapBounds);
-        console.log('Received places:', placesData);
-        addPlacesToCache(placesData); // [수정] 로컬 상태 대신 스토어에 저장
+        console.log('Fetching places for bounds via WebSocket:', mapBounds);
+        focusPlace(mapBounds, (places) => {
+          console.log('Received places via WebSocket:', places);
+          addPlacesToCache(places);
+        });
       } catch (error) {
         console.error('Failed to fetch places:', error);
       }
     },
-    [addPlacesToCache]
+    [addPlacesToCache, focusPlace]
   );
 
   /**
@@ -917,15 +920,9 @@ export function MapPanel({
       );
       mapInstance.panTo(position);
 
-      const poiData = {
-        latitude: Number(placeToProcess.y),
-        longitude: Number(placeToProcess.x),
-        address:
-          placeToProcess.road_address_name || placeToProcess.address_name,
-        placeName: placeToProcess.place_name,
-        categoryName: placeToProcess.category_name,
-      };
-      markPoi(poiData);
+      // TODO: KakaoPlace를 선택할 때 placeId가 필요함.
+      // 백엔드에 place를 먼저 생성하거나, 이 플로우를 제거해야 함.
+      console.warn('KakaoPlace selection flow needs placeId implementation');
       setSelectedPlace(null);
     }
   }, [mapInstance, markPoi, setSelectedPlace]);
@@ -1718,6 +1715,7 @@ export function MapPanel({
                           unmarkPoi(markedPoi.id);
                         } else {
                           markPoi({
+                            placeId: selectedBackendPlace.id,
                             latitude: selectedBackendPlace.latitude,
                             longitude: selectedBackendPlace.longitude,
                             address: selectedBackendPlace.address,

@@ -11,7 +11,6 @@ interface RightPanelProps {
   sendMessage: (message: string) => void;
   isChatConnected: boolean;
   workspaceId: string;
-  markPoi: ReturnType<typeof usePoiSocket>['markPoi'];
   onAddPoiToItinerary: (poi: any) => void;
   onCardClick: (poi: any) => void;
 }
@@ -22,7 +21,6 @@ export const RightPanel = memo(function RightPanel({
   sendMessage,
   isChatConnected,
   workspaceId,
-  markPoi,
   onAddPoiToItinerary,
   onCardClick,
 }: RightPanelProps) {
@@ -45,7 +43,6 @@ export const RightPanel = memo(function RightPanel({
             sendMessage={sendMessage}
             isChatConnected={isChatConnected}
             workspaceId={workspaceId}
-            markPoi={markPoi}
             onAddPoiToItinerary={onAddPoiToItinerary}
             onCardClick={onCardClick}
           />
