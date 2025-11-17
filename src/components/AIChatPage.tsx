@@ -26,11 +26,6 @@ import { useNavigate } from 'react-router-dom';
 // 1. 백엔드 API 엔드포인트 필요: GET /api/inspirations
 // 2. 또는 기존 Feed 데이터를 랜덤하게 3개 선택
 // 3. InspirationCard 컴포넌트 별도 생성 권장
-import { Search, Plus, Send } from 'lucide-react';
-import { Button } from './ui/button';
-import client from '../api/client';
-import { type Post } from '../types/post';
-import { WorkspaceCard } from './WorkspaceCard';
 
 export function AIChatPage() {
   const [posts, setPosts] = useState<Post[]>([]);
