@@ -27,7 +27,6 @@ export function Sidebar({
   isLoggedIn,
   onLoginClick,
   onProfileClick,
-  onAIChatClick,
 }: SidebarProps) {
   const { user } = useAuthStore();
   const location = useLocation();

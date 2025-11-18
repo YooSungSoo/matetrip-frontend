@@ -5,7 +5,6 @@ import {
   useNavigate,
   useLocation,
   Outlet,
-  useParams,
 } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { MainPage as AIMatchingPageComponent } from './components/AIMatchingPage';
@@ -215,29 +214,10 @@ function ReviewPageWrapper() {
   return <ReviewPage onComplete={handleComplete} />;
 }
 
-/**
- * URL 경로에 따라 PostDetail 모달을 열어주는 트리거 컴포넌트입니다.
- * /posts/:id 경로로 직접 진입하거나 새로고침 시 모달이 열리도록 합니다.
- */
-function PostDetailModalTrigger({
-  onViewPost,
-}: {
-  onViewPost: (postId: string) => void;
-}) {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (id) {
-      onViewPost(id);
-    }
-  }, [id, onViewPost, navigate]);
-
-  return null; // 이 컴포넌트는 UI를 렌더링하지 않습니다.
-}
-
 export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const background = location.state?.background;
 
   // Zustand 스토어에서 상태와 액션을 가져옵니다.
   const { isLoggedIn, user, checkAuth, logout: storeLogout } = useAuthStore();
@@ -293,10 +273,11 @@ export default function App() {
 
   const handleViewPost = useCallback(
     (postId: string) => {
-      setPostDetailModalState({ open: true, postId });
-      navigate(`/posts/${postId}`, { replace: true });
+      navigate(`/posts/${postId}`, {
+        state: { background: location },
+      });
     },
-    [navigate]
+    [navigate, location]
   );
 
   const handleDeleteSuccess = () => {
@@ -307,13 +288,21 @@ export default function App() {
     setChatPanelOpen(true);
   };
 
+  const handleClosePostDetail = () => {
+    if (background) {
+      navigate(background.pathname + background.search, { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div className="h-screen bg-gray-50">
       {' '}
       {/* h-screen 유지 */}
       <Toaster richColors position="top-right" />
       {isLoggedIn && <NotificationListener />}
-      <Routes>
+      <Routes location={background || location}>
         {/* Routes without Header */}
         <Route element={<PublicOnlyRoute />}>
           <Route
@@ -411,53 +400,76 @@ export default function App() {
           <Route path="/search" element={<SearchResultsWrapper />} />
           {/* 매칭용 검색 라우트 추가  */}
           <Route path="/match-search" element={<MatchSearchResults />} />
-          <Route
-            path="/posts/:id"
-            element={
-              <>
-                {/* 배경으로 메인 페이지를 렌더링합니다. */}
-                <NewMainPageWrapper
-                  onCreatePost={() => setShowCreatePost(true)}
-                  onJoinWorkspace={(postId, workspaceName) => {
-                    const createAndNavigate = async () => {
-                      try {
-                        const response = await client.post<CreateWorkspaceResponse>(
-                          '/workspace',
-                          { postId, workspaceName }
-                        );
-                        const { planDayDtos, workspaceResDto } = response.data;
-                        const { id, workspaceName: resWorkspaceName } =
-                          workspaceResDto;
-                        navigate(`/workspace/${id}`, {
-                          state: {
-                            workspaceName: resWorkspaceName,
-                            planDayDtos,
-                          },
-                        });
-                      } catch (error) {
-                        console.error('Failed to create or join workspace:', error);
-                        alert('워크스페이스에 입장하는 중 오류가 발생했습니다.');
-                      }
-                    };
-                    createAndNavigate();
-                  }}
-                  onViewProfile={handleViewProfile}
-                  onEditPost={(post) => {
-                    setSelectedPostForEdit(post);
-                    setShowEditPost(true);
-                  }}
-                  onDeleteSuccess={handleDeleteSuccess}
-                />
-                <PostDetailModalTrigger onViewPost={handleViewPost} />
-              </>
-            }
-          />
           <Route path="/workspace/:id" element={<WorkspaceWrapper />} />
           <Route path="/review" element={<ReviewPageWrapper />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
       {/* Modals */}
+      {background && (
+        <Routes>
+          <Route
+            path="/posts/:id"
+            element={
+              <Dialog
+                open
+                onOpenChange={(open) => {
+                  if (!open) {
+                    handleClosePostDetail();
+                  }
+                }}
+              >
+                <DialogContent className="w-full !max-w-[1100px] h-[90vh] p-0 flex flex-col [&>button]:hidden border-0 rounded-lg overflow-hidden">
+                  <PostDetail
+                    postId={location.pathname.split('/')[2]}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        handleClosePostDetail();
+                      }
+                    }}
+                    onViewProfile={handleViewProfile}
+                    onEditPost={(post) => {
+                      setSelectedPostForEdit(post);
+setShowEditPost(true);
+                    }}
+                    onJoinWorkspace={(postId, workspaceName) => {
+                      const createAndNavigate = async () => {
+                        try {
+                          const response =
+                            await client.post<CreateWorkspaceResponse>(
+                              '/workspace',
+                              { postId, workspaceName }
+                            );
+                          const { planDayDtos, workspaceResDto } =
+                            response.data;
+                          const { id, workspaceName: resWorkspaceName } =
+                            workspaceResDto;
+                          navigate(`/workspace/${id}`, {
+                            state: {
+                              workspaceName: resWorkspaceName,
+                              planDayDtos,
+                            },
+                          });
+                        } catch (error) {
+                          console.error(
+                            'Failed to create or join workspace:',
+                            error
+                          );
+                          toast.error(
+                            '워크스페이스에 입장하는 중 오류가 발생했습니다.'
+                          );
+                        }
+                      };
+                      createAndNavigate();
+                    }}
+                    onDeleteSuccess={handleDeleteSuccess}
+                  />
+                </DialogContent>
+              </Dialog>
+            }
+          />
+        </Routes>
+      )}
       <AIChatPanel open={chatPanelOpen} onOpenChange={setChatPanelOpen} />
       {showCreatePost && (
         <CreatePostModal onClose={() => setShowCreatePost(false)} />
@@ -485,62 +497,6 @@ export default function App() {
         onViewPost={handleViewPost}
         onLogoutClick={handleLogout}
       />
-      {postDetailModalState.open && postDetailModalState.postId && (
-        <Dialog
-          open={postDetailModalState.open}
-          onOpenChange={(open) => {
-            if (!open) {
-              setPostDetailModalState({ open: false, postId: null });
-              navigate('/', { replace: true }); // 모달이 닫히면 URL을 메인으로 변경
-            }
-          }}
-        >
-          <DialogContent className="w-full !max-w-[1100px] h-[90vh] p-0 flex flex-col [&>button]:hidden border-0 rounded-lg overflow-hidden">
-            <PostDetail
-              postId={postDetailModalState.postId}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setPostDetailModalState({ open: false, postId: null });
-                  navigate('/', { replace: true }); // 모달이 닫히면 URL을 메인으로 변경
-                }
-              }}
-              onViewProfile={handleViewProfile}
-              onEditPost={(post) => {
-                setPostDetailModalState({ open: false, postId: null });
-                setSelectedPostForEdit(post);
-                setShowEditPost(true);
-              }}
-              onJoinWorkspace={(postId, workspaceName) => {
-                const createAndNavigate = async () => {
-                  try {
-                    const response = await client.post<CreateWorkspaceResponse>(
-                      '/workspace',
-                      { postId, workspaceName }
-                    );
-                    const { planDayDtos, workspaceResDto } = response.data;
-                    const { id, workspaceName: resWorkspaceName } =
-                      workspaceResDto;
-                    setPostDetailModalState({ open: false, postId: null });
-                    navigate(`/workspace/${id}`, {
-                      state: {
-                        workspaceName: resWorkspaceName,
-                        planDayDtos,
-                      },
-                    });
-                  } catch (error) {
-                    console.error('Failed to create or join workspace:', error);
-                    toast.error(
-                      '워크스페이스에 입장하는 중 오류가 발생했습니다.'
-                    );
-                  }
-                };
-                createAndNavigate();
-              }}
-              onDeleteSuccess={handleDeleteSuccess}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

@@ -3062,3 +3062,16 @@ html {
     display: none !important;
   }
 }
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--scroll-x));
+  }
+}
+
+.group:hover .marquee-on-hover {
+  animation: marquee 4s linear;
+}
