@@ -1,8 +1,6 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, CheckCircle, Sparkles } from 'lucide-react';
-import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
+import { MapPin, Calendar, CheckCircle, User, Thermometer } from 'lucide-react';
 import type { MatchingInfo } from '../types/matching';
 import { API_BASE_URL } from '../api/client';
 import type { MatchRecruitingPostDto } from '../types/matchSearch';
@@ -11,7 +9,7 @@ import type { Post } from '../types/post';
 interface MatchingCardProps {
   /** 추천 카드에 표시할 모집글 정보 (Post 또는 MatchRecruitingPostDto) */
   post: Post | MatchRecruitingPostDto;
-  /** 이 카드에만 필요한 매칭 점보 */
+  /** 이 카드에만 필요한 매칭 정보 */
   matchingInfo: MatchingInfo;
   /** 카드 클릭 이벤트 핸들러 */
   onClick?: () => void;
@@ -22,8 +20,9 @@ interface MatchingCardProps {
 const defaultCoverImage = 'https://via.placeholder.com/400x300';
 
 /**
- * 이미지에 표시된 '매칭 스코어' 기반의 추천 카드를 렌더링하는 컴포넌트입니다.
- * WorkspaceCard의 기본 골격(props, 스타일)을 따릅니다.
+ * 3D 회전 가능한 매칭 카드 컴포넌트
+ * - 앞면: 게시글 이미지, 제목, 장소, 기간, 매칭률
+ * - 뒷면: 매너온도, 매칭 사유
  */
 export function MatchingCard({
   post,
@@ -31,38 +30,27 @@ export function MatchingCard({
   onClick,
   rank,
 }: MatchingCardProps) {
-  const { title, location, startDate, endDate, status = '모집중' } = post;
-  const { score, tendency, style, vectorscore } = matchingInfo;
-  const formatMatchText = (value?: string, fallback = '[ ]') =>
+  const { title, location, startDate, endDate } = post;
+  const { score, tendency, style, vectorscore, mannerTemperature } = matchingInfo;
+  
+  const formatMatchText = (value?: string, fallback = '정보 없음') =>
     value && value.trim().length > 0 ? value : fallback;
+  
   const safeScore =
     typeof score === 'number' && !Number.isNaN(score)
       ? Math.min(100, Math.max(0, score))
       : 0;
+  
   const safeVectorScore =
     typeof vectorscore === 'number' && !Number.isNaN(vectorscore)
       ? Math.min(100, Math.max(0, vectorscore))
       : undefined;
-  const isInteractive = typeof onClick === 'function';
-  const cardClassName = `bg-white rounded-2xl border border-blue-50 shadow-lg overflow-hidden mx-6 relative w-[380px] h-full flex flex-col${
-    isInteractive
-      ? ' cursor-pointer hover:shadow-xl transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500'
-      : ''
-  }`;
 
-  const rankLabel = rank && rank > 1 ? `${rank}순위 추천` : 'Best Match';
+  const safeMannerTemp = mannerTemperature ?? 36.5;
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!onClick) {
-      return;
-    }
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onClick();
-    }
-  };
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
 
-  // WorkspaceCard에서 가져온 총 일수 계산 함수
+  // 총 일수 계산
   const calculateDays = () => {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
@@ -72,14 +60,14 @@ export function MatchingCard({
     return diffDays;
   };
 
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const renderDateText = () => {
     if (!startDate || !endDate) {
       return '일정 미정';
     }
-    return `${startDate} ~ ${endDate} (${calculateDays()}일)`;
+    return `${startDate} ~ ${endDate}`;
   };
 
+  // 게시글 이미지 로드
   useEffect(() => {
     let cancelled = false;
 
@@ -121,105 +109,148 @@ export function MatchingCard({
     };
   }, [post.imageId]);
 
+  // TODO: 프로필 이미지 API 연동
+  // 향후 post.writerId를 사용해 /profile/user/:userId 호출
+  // response.data.profileImage를 writerProfileImageUrl로 전달
+
   return (
     <div
-      className={cardClassName}
+      className="relative"
+      style={{
+        width: '240px',
+        height: '280px',
+        transformStyle: 'preserve-3d',
+      }}
       onClick={onClick}
-      role={isInteractive ? 'button' : undefined}
-      tabIndex={isInteractive ? 0 : undefined}
-      onKeyDown={isInteractive ? handleKeyDown : undefined}
     >
-      {status && (
-        <Badge
-          className="absolute top-4 right-4 z-10 px-3 py-1 text-sm font-semibold"
-          variant={status === '모집중' ? 'default' : 'secondary'}
-        >
-          {status}
-        </Badge>
-      )}
-      <div className="absolute top-4 left-4 z-10 inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-pink-500 border border-pink-100">
-        <Sparkles className="w-3.5 h-3.5" />
-        {rankLabel}
-      </div>
-
-      <div className="h-48 overflow-hidden flex-shrink-0">
-        <ImageWithFallback
-          src={coverImageUrl ?? defaultCoverImage}
-          alt={title}
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      <div className="p-6 space-y-3 flex flex-col flex-grow">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-gray-900 text-xl font-bold leading-snug truncate">
-            {title}
-          </h3>
-          {/* <span className="inline-flex items-center gap-1 text-xs font-semibold text-pink-500">
-            <Sparkles className="w-3.5 h-3.5" />
-            {rankLabel}
-          </span> */}
-        </div>
-
-        <div className="flex items-center gap-2 text-gray-600">
-          <MapPin className="w-4 h-4" />
-          <span>{location}</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-gray-600">
-          <Calendar className="w-4 h-4" />
-          <span>{renderDateText()}</span>
-        </div>
-
-        <div className="pt-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-800">
-              매칭 스코어
-            </span>
-            <span className="text-3xl font-black text-blue-600">
-              {safeScore}%
-            </span>
-          </div>
-          <Progress
-            value={safeScore}
-            className="h-2 [&>div]:bg-gradient-to-r [&>div]:from-blue-600 [&>div]:to-pink-500"
+      {/* ===== 앞면 (Front Face) ===== */}
+      <div
+        className="absolute inset-0 bg-white rounded-[16px] overflow-hidden shadow-lg"
+        style={{
+          backfaceVisibility: 'hidden',
+          transform: 'rotateY(0deg)',
+        }}
+      >
+        {/* 이미지 영역 */}
+        <div className="relative h-[200px] bg-gray-300 overflow-hidden rounded-[16px]">
+          <ImageWithFallback
+            src={coverImageUrl ?? defaultCoverImage}
+            alt={title}
+            className="w-full h-full object-cover"
           />
-        </div>
-
-        <div className="space-y-1 text-sm text-gray-700">
-          <div className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-pink-500 flex-shrink-0 mt-0.5" />
-            <span>
-              여행 스타일이{' '}
-              <span className="font-semibold text-gray-900">
-                {formatMatchText(style)}
-              </span>
-              (으)로 같아요
-            </span>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-            <span>
-              여행 성향이{' '}
-              <span className="font-semibold text-gray-900">
-                {formatMatchText(tendency)}
-              </span>
-              (으)로 같아요
-            </span>
-          </div>
-          {safeVectorScore !== undefined && (
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
-              <span>
-                프로필 유사도가{' '}
-                <span className="font-semibold text-gray-900">
-                  {safeVectorScore}%
-                </span>
-                예요
-              </span>
+          
+          {/* Best 배지 (rank === 1일 때만) */}
+          {rank === 1 && (
+            <div className="absolute top-2 right-2 bg-[#101828] rounded-[8px] px-2 py-0.5">
+              <p className="text-white text-[12px] font-medium">Best</p>
             </div>
           )}
+
+          {/* 하단 오버레이: 프로필 아이콘 + 매칭률 */}
+          <div className="absolute bottom-2 left-2 right-2 flex items-end gap-2">
+            {/* 프로필 아이콘 (48px 원형) */}
+            <div className="w-12 h-12 bg-white rounded-full border-2 border-white flex items-center justify-center shrink-0">
+              <User className="w-6 h-6 text-gray-400" />
+            </div>
+
+            {/* 매칭률 */}
+            <div className="flex-1 flex items-end justify-between pb-0.5">
+              <p className="text-[11px] font-medium text-white">매칭률</p>
+              <div className="flex items-baseline gap-0.5">
+                <p className="text-[18px] font-medium text-white leading-[1.4]">
+                  {safeScore}
+                </p>
+                <p className="text-[10px] font-medium text-white leading-[1.6]">
+                  %
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* 카드 하단: 제목, 장소, 기간 */}
+        <div className="px-2.5 pt-2 pb-2 space-y-1">
+          <h3 className="text-[16px] font-bold text-black leading-[1.3] truncate">
+            {title}
+          </h3>
+          
+          <div className="flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-black shrink-0" />
+            <p className="text-[12px] font-medium text-black truncate">
+              {location}
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-black shrink-0" />
+            <p className="text-[12px] font-medium text-black truncate">
+              {renderDateText()}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== 뒷면 (Back Face) ===== */}
+      <div
+        className="absolute inset-0 bg-white rounded-[16px] shadow-lg px-3 py-4 flex flex-col justify-between"
+        style={{
+          backfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)',
+        }}
+      >
+        {/* 상단: 매너온도 */}
+        <div className="flex items-end justify-between">
+          <p className="text-[12px] font-medium text-black leading-[1.2]">
+            매너온도
+          </p>
+          <div className="flex items-start gap-1">
+            <p className="text-[18px] font-medium text-black leading-[1.4]">
+              {safeMannerTemp.toFixed(1)}
+            </p>
+            <Thermometer className="w-4 h-4 text-black" />
+          </div>
+        </div>
+
+        {/* 하단: 당신과의 매칭 사유 */}
+        <div className="space-y-1.5">
+          <p className="text-[13px] font-medium text-black mb-1.5">
+            당신과의 매칭 사유
+          </p>
+          
+          <div className="space-y-2">
+            {/* 매칭 사유 1: 여행 스타일 */}
+            <div className="flex items-start gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-black shrink-0 mt-0.5" />
+              <p className="text-[11px] font-medium text-black leading-[1.4]">
+                여행 스타일: {formatMatchText(style, '정보없음')}
+              </p>
+            </div>
+            
+            {/* 매칭 사유 2: 여행 성향 */}
+            <div className="flex items-start gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-black shrink-0 mt-0.5" />
+              <p className="text-[11px] font-medium text-black leading-[1.4]">
+                여행 성향: {formatMatchText(tendency, '정보없음')}
+              </p>
+            </div>
+            
+            {/* 매칭 사유 3: 프로필 유사도 */}
+            {safeVectorScore !== undefined && (
+              <div className="flex items-start gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-black shrink-0 mt-0.5" />
+                <p className="text-[11px] font-medium text-black leading-[1.4]">
+                  프로필 유사도: {safeVectorScore}%
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 
+          TODO: 매너온도 API 연동
+          향후 AIMatchingPage의 fetchMatches에서 /profile/user/:userId 호출 시
+          response.data.mannerTemperature 필드를 matchingInfo에 포함하여 전달
+        */}
       </div>
     </div>
   );

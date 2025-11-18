@@ -52,4 +52,9 @@ export interface MatchingInfo {
    * 프로필 유사도 (0-100)
    */
   vectorscore?: number;
+  /**
+   * 매너온도 (35.0-40.0)
+   * TODO: 향후 API 연동 시 백엔드에서 제공
+   */
+  mannerTemperature?: number;
 }
