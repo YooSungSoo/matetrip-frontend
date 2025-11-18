@@ -59,7 +59,10 @@ export function Sidebar({
       >
         {/* Logo Section */}
         <div className="border-b border-gray-200 px-6 py-6 h-[81px] flex items-center">
-          <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          >
             <div className="w-8 h-8 bg-[#101828] rounded-[10px] flex items-center justify-center shrink-0">
               <Map className="w-5 h-5 text-white" />
             </div>
@@ -71,14 +74,14 @@ export function Sidebar({
                 MateTrip
               </span>
             )}
-          </div>
+          </button>
         </div>
 
       {/* Navigation Menu */}
       <nav className="flex-1 px-4 py-4 flex flex-col justify-between">
         <div className="flex flex-col gap-1">
           {/* AI Chat */}
-          <button
+          {/* <button
             onClick={handleAIChatClick}
             className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
               isExpanded ? 'px-4' : 'justify-center'
@@ -91,9 +94,12 @@ export function Sidebar({
           >
             <MessageSquare className="w-5 h-5 shrink-0" />
             {isExpanded && <span className="font-normal text-base whitespace-nowrap">AI Chat</span>}
-          </button>
+          </button> */}
 
-          {/* AI 동행 찾기 */}
+          {/* 여행 모두보기 */}
+
+
+          {/* Main */}
           <button
             onClick={() => navigate('/')}
             className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
@@ -106,7 +112,7 @@ export function Sidebar({
             title={!isExpanded ? 'AI 동행 찾기' : ''}
           >
             <Plane className="w-5 h-5 shrink-0" />
-            {isExpanded && <span className="font-normal text-base whitespace-nowrap">AI 동행 찾기</span>}
+            {isExpanded && <span className="font-normal text-base whitespace-nowrap">Main</span>}
           </button>
 
             {/* 모든 동행 */}
