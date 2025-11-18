@@ -54,7 +54,7 @@ export function Sidebar({
     <div className="relative flex shrink-0">
       <div
         className={`bg-white border-r border-gray-200 h-screen flex flex-col shrink-0 transition-all duration-300 ${
-          isExpanded ? 'w-[210px]' : 'w-[84px]'}`
+          isExpanded ? 'w-[180px]' : 'w-[64px]'}`
         }
       >
         {/* Logo Section */}
@@ -78,7 +78,7 @@ export function Sidebar({
         </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 py-4 flex flex-col justify-between">
+      <nav className="flex-1 px-2 py-4 flex flex-col justify-between">
         <div className="flex flex-col gap-1">
           {/* AI Chat */}
           {/* <button
@@ -115,6 +115,26 @@ export function Sidebar({
             {isExpanded && <span className="font-normal text-base whitespace-nowrap">Main</span>}
           </button>
 
+          {/* All-Trip */}
+          <button
+            onClick={() => navigate('/ai-matching')}
+            className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+              isExpanded ? 'px-4' : 'justify-center' 
+            } ${
+              isActive('/ai-matching')
+                ? 'bg-[#101828] text-white'
+                : 'text-[#364153] hover:bg-gray-100'
+            }`}
+            title={!isExpanded ? 'All-Trip' : ''}
+          >
+            <Sparkles className="w-5 h-5 shrink-0" />
+            {isExpanded && (
+              <span className="font-normal text-base whitespace-nowrap">
+                메이트 매칭
+              </span>
+            )}
+          </button>
+
             {/* 모든 동행 */}
             <button
               onClick={() => navigate('/all-posts')}
@@ -125,12 +145,12 @@ export function Sidebar({
                   ? 'bg-[#101828] text-white'
                   : 'text-[#364153] hover:bg-gray-100'
               }`}
-              title={!isExpanded ? '모든 동행' : ''}
+              title={!isExpanded ? '모든 여행' : ''}
             >
               <FileText className="w-5 h-5 shrink-0" />
               {isExpanded && (
                 <span className="font-normal text-base whitespace-nowrap">
-                  모든 동행
+                  모든 여행
                 </span>
               )}
             </button>
@@ -151,7 +171,7 @@ export function Sidebar({
                 <Heart className="w-5 h-5 shrink-0" />
                 {isExpanded && (
                   <span className="font-normal text-base whitespace-nowrap">
-                    SAVE
+                    나의 여행
                   </span>
                 )}
               </button>
@@ -172,7 +192,7 @@ export function Sidebar({
               <Sparkles className="w-5 h-5 shrink-0" />
               {isExpanded && (
                 <span className="font-normal text-base whitespace-nowrap">
-                  Inspiration
+                  Hot Place
                 </span>
               )}
             </button>
