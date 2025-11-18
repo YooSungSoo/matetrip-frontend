@@ -10,9 +10,6 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { type Post } from '../types/post';
-import { Sidebar } from './Sidebar';
-import { useAuthStore } from '../store/authStore';
-import { useNavigate } from 'react-router-dom';
 
 // TODO: Jump back in 섹션 - 방문한 PostCard 작성자 프로필 데이터
 // 구현 방법:
@@ -28,11 +25,9 @@ import { useNavigate } from 'react-router-dom';
 // 3. InspirationCard 컴포넌트 별도 생성 권장
 
 export function AIChatPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [_posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [chatMessage, setChatMessage] = useState('');
-  const { isAuthenticated } = useAuthStore();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPosts = async () => {

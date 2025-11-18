@@ -43,7 +43,7 @@ const MarkerStorage: React.FC<MarkerStorageProps> = ({ pois }) => {
           fontWeight: 'bold',
         }}
       >
-        <span>마커 보관함</span>
+        <span>장소 보관함</span>
         <span>{isOpen ? '숨기기' : '보이기'}</span>
       </div>
       {isOpen && (
@@ -63,7 +63,7 @@ const MarkerStorage: React.FC<MarkerStorageProps> = ({ pois }) => {
             ))
           ) : (
             <div style={{ color: '#888', fontSize: '14px' }}>
-              보관된 마커가 없습니다.
+              보관된 장소가 없습니다.
             </div>
           )}
         </div>

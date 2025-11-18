@@ -9,7 +9,6 @@ import { MainPostCardSkeleton } from './MainPostCardSkeleton';
 import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
 import type { MatchingInfo, MatchCandidateDto } from '../types/matching';
-import { type KeywordValue } from '../utils/keyword';
 import { MatchingSearchBar } from './MatchingSearchBar';
 
 interface MainPageProps {
@@ -66,18 +65,18 @@ const normalizeOverlapText = (values?: unknown): string | undefined => {
 };
 
 // 임시 매칭 정보 생성 함수 (추후 실제 API로 교체 가능)
-const generateMockMatchingInfo = (index: number): MatchingInfo => {
-  const scores = [92, 85, 78, 73, 68, 65, 62, 58, 55, 52];
-  const tendencies = ['즉흥적', '계획적', '주도적', '따라가는'];
-  const styles = ['호텔', '게스트하우스', '에어비앤비', '캠핑'];
-
-  return {
-    score: scores[index % scores.length] || 50,
-    tendency: tendencies[index % tendencies.length],
-    style: styles[index % styles.length],
-    vectorscore: Math.floor(Math.random() * 30) + 60, // 60-90 사이 랜덤값
-  };
-};
+// const generateMockMatchingInfo = (index: number): MatchingInfo => {
+//   const scores = [92, 85, 78, 73, 68, 65, 62, 58, 55, 52];
+//   const tendencies = ['즉흥적', '계획적', '주도적', '따라가는'];
+//   const styles = ['호텔', '게스트하우스', '에어비앤비', '캠핑'];
+//
+//   return {
+//     score: scores[index % scores.length] || 50,
+//     tendency: tendencies[index % tendencies.length],
+//     style: styles[index % styles.length],
+//     vectorscore: Math.floor(Math.random() * 30) + 60, // 60-90 사이 랜덤값
+//   };
+// };
 
 export function MainPage({
   onSearch,
@@ -89,7 +88,7 @@ export function MainPage({
   const [isLoading, setIsLoading] = useState(true);
   const { user, isAuthLoading } = useAuthStore();
   const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
-  const [isMatchesLoading, setIsMatchesLoading] = useState(true);
+  const [_isMatchesLoading, setIsMatchesLoading] = useState(true);
 
   // const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -270,6 +269,108 @@ export function MainPage({
         </div>
         {/* Search Bar and Filters - 로그인한 사용자에게만 표시 */}
         {isLoggedIn && <MatchingSearchBar />}
+        {/* {isLoggedIn && (
+          <div className="mb-10 flex items-start gap-3">
+            <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="여행지, 관심사, 여행 스타일로 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </form>
+            <div className="relative" ref={filterContainerRef}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className={`gap-2 px-6 py-3 h-auto ${
+                  isFilterActive
+                    ? 'border-blue-500 text-blue-600 bg-blue-50'
+                    : 'border-gray-200'
+                }`}
+              >
+                <SlidersHorizontal className="w-5 h-5" />
+                Filters
+              </Button>
+              {isFilterOpen && (
+                <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-gray-200 bg-white shadow-xl p-5 z-20 space-y-5">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                      여행 기간
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      />
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                      여행 키워드
+                    </h4>
+                    <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
+                      {KEYWORD_OPTIONS.map((option) => {
+                        const isSelected = selectedKeyword === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() =>
+                              setSelectedKeyword(isSelected ? '' : option.value)
+                            }
+                            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={handleFilterReset}
+                      className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      초기화
+                    </button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsFilterOpen(false)}
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        닫기
+                      </Button>
+                      <Button type="button" onClick={handleFilterApply}>
+                        필터 적용
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}*/}
+        {/* </div>
+          </div>
+        )} */}
         {/* 로그인하지 않은 사용자를 위한 안내 배너 */}
         {!isLoggedIn && (
           <div className="mb-8 bg-gradient-to-r from-blue-50 to-pink-50 rounded-2xl p-6 border border-blue-100">

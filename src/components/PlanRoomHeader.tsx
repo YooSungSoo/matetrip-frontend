@@ -63,36 +63,28 @@ export function PlanRoomHeader({
   );
 
   return (
-    <div className="border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-3 flex items-center justify-between flex-shrink-0 h-18">
+    <div className="border-b border-gray-700 bg-gray-900 px-6 py-3 flex items-center justify-between flex-shrink-0 h-18 text-white relative">
       {/* 왼쪽 영역: 뒤로가기 버튼, 제목 */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-1 min-w-0">
         <button
           onClick={onBack}
-          className="p-2 hover:bg-white/60 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <ArrowLeft className="w-5 h-5 text-gray-300" />
         </button>
-        <h1 className="text-gray-900 text-xl">{title}</h1>
+        <h1 className="text-white text-2xl font-bold truncate">{title}</h1>
       </div>
 
       {/* 중앙 영역: 날짜 정보와 참여인원 */}
-      <div className="flex items-center gap-3 text-gray-700">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-indigo-600" />
-          <span>
-            {startDate} ~ {endDate} ({totalDays}일)
-          </span>
-        </div>
-        {/* // TODO: 나중에 추가 */}
-        {/* <span className="text-gray-400">|</span> */}
-        {/* <div className="flex items-center gap-2"> */}
-        {/*   <Users className="w-4 h-4 text-purple-600" /> */}
-        {/*   <span>{currentMembers}/{maxMembers}명</span> */}
-        {/* </div> */}
+      <div className="flex-grow flex justify-center items-center gap-2 text-gray-400 px-4">
+        <Calendar className="w-4 h-4 text-gray-400" />
+        <span>
+          {startDate} ~ {endDate} ({totalDays}일)
+        </span>
       </div>
 
       {/* 오른쪽 영역: 접속 중인 멤버 아바타 + 메뉴 버튼 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
         {/* 접속 중인 멤버 아바타 */}
         {activeMembers.length > 0 && (
           <div className="flex items-center">
@@ -115,33 +107,46 @@ export function PlanRoomHeader({
         {/* 메뉴 버튼 */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="w-10 h-10">
+              <MoreVertical className="w-6 h-6" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={onExportPdf} disabled={isGeneratingPdf}>
+          <DropdownMenuContent
+            align="end"
+            className="w-56 bg-white text-gray-900"
+          >
+            <DropdownMenuItem
+              onClick={onExportPdf}
+              disabled={isGeneratingPdf}
+              className="border-b border-gray-100 hover:bg-gray-100 focus:bg-gray-100 py-3 px-4 text-base"
+            >
               {isGeneratingPdf ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader2 className="w-6 h-6 mr-3 animate-spin" />
                   <span>PDF 생성 중...</span>
                 </>
               ) : (
                 <>
-                  <FileDown className="w-5 h-5 mr-2" />
+                  <FileDown className="w-6 h-6 mr-3" />
                   <span>PDF로 내보내기</span>
                 </>
               )}
             </DropdownMenuItem>
 
             {isOwner && (
-              <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
-                <CheckCircle className="w-5 h-5 mr-2" />
+              <DropdownMenuItem
+                onClick={() => setReviewModalOpen(true)}
+                className="border-b border-gray-100 hover:bg-gray-100 focus:bg-gray-100 py-3 px-4 text-base"
+              >
+                <CheckCircle className="w-6 h-6 mr-3" />
                 <span>여행 완료하기</span>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={onExit} className="text-red-600">
-              <DoorOpen className="w-5 h-5 mr-2" />
+            <DropdownMenuItem
+              onClick={onExit}
+              className="text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600 py-3 px-4 text-base"
+            >
+              <DoorOpen className="w-6 h-6 mr-3" />
               <span>이 여행에서 나가기</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

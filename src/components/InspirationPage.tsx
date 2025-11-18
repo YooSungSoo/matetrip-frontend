@@ -40,7 +40,7 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [_searchQuery, setSearchQuery] = useState('');
   const { isAuthLoading } = useAuthStore();
 
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -244,7 +244,7 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
                     badgeText={place.badgeText}
                     title={place.title}
                     address={place.address}
-                    onClick={() => handleCardClick(place.id)}
+                    onClick={() => handleCardClick(place)}
                   />
                 ))}
               </div>

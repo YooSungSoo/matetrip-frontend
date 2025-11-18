@@ -27,7 +27,6 @@ export function Sidebar({
   isLoggedIn,
   onLoginClick,
   onProfileClick,
-  onCreatePost,
   onAIChatClick,
 }: SidebarProps) {
   const { user } = useAuthStore();

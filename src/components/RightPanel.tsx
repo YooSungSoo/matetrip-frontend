@@ -2,8 +2,8 @@ import { memo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { MessageCircle } from 'lucide-react';
 import { ChatPanel } from './ChatPanel';
-import { type ChatMessage } from '../hooks/useChatSocket';
-import { type usePoiSocket } from '../hooks/usePoiSocket';
+import { type AiPlace, type ChatMessage } from '../hooks/useChatSocket';
+import type { Poi } from '../hooks/usePoiSocket';
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -11,8 +11,10 @@ interface RightPanelProps {
   sendMessage: (message: string) => void;
   isChatConnected: boolean;
   workspaceId: string;
-  onAddPoiToItinerary: (poi: any) => void;
-  onCardClick: (poi: any) => void;
+  onAddPoiToItinerary: (poi: Poi) => void;
+  onCardClick: (poi: Pick<Poi, 'latitude' | 'longitude'>) => void;
+  setAiRecommendedPlaces: (places: AiPlace[]) => void;
+  aiRecommendedPlaces: AiPlace[];
 }
 
 export const RightPanel = memo(function RightPanel({
@@ -23,6 +25,8 @@ export const RightPanel = memo(function RightPanel({
   workspaceId,
   onAddPoiToItinerary,
   onCardClick,
+  setAiRecommendedPlaces,
+  aiRecommendedPlaces,
 }: RightPanelProps) {
   if (!isOpen) {
     return null;
@@ -45,6 +49,8 @@ export const RightPanel = memo(function RightPanel({
             workspaceId={workspaceId}
             onAddPoiToItinerary={onAddPoiToItinerary}
             onCardClick={onCardClick}
+            setAiRecommendedPlaces={setAiRecommendedPlaces}
+            aiRecommendedPlaces={aiRecommendedPlaces}
           />
         </TabsContent>
       </Tabs>

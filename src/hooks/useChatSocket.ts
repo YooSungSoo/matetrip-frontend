@@ -135,7 +135,9 @@ export function useChatSocket(workspaceId: string) {
           const tool = payload.toolData[0];
           // [수정] tool_output이 문자열이 아닌 객체 배열로 오므로 파싱 로직을 제거하고 직접 할당합니다.
           if (
-            tool.tool_name === 'recommend_places_by_all_users' &&
+            (tool.tool_name === 'recommend_places_by_all_users' ||
+              tool.tool_name === 'recommend_nearby_places' ||
+              tool.tool_name === 'recommend_popular_places_in_region') &&
             Array.isArray(tool.tool_output)
           ) {
             newMessage.recommendedPlaces = tool.tool_output as AiPlace[];
