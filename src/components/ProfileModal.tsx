@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from './ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+  DialogClose,
+} from './ui/dialog';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import {
@@ -55,10 +61,80 @@ interface Review {
     };
   };
   rating: number;
-  // comment: string;
-  // API 응답 필드명인 content로 변경
   content: string;
   createdAt: string;
+}
+
+function ProfileModalSkeleton({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-4xl min-w-[900px] h-[80vh] p-0 overflow-hidden flex flex-col border-0"
+        aria-describedby={undefined}
+      >
+        <DialogHeader className="flex flex-row items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10 text-left">
+          <div className="h-6 bg-gray-200 rounded w-48 animate-pulse" />
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <X className="w-5 h-5" />
+            </Button>
+          </DialogClose>
+        </DialogHeader>
+
+        <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50 no-scrollbar">
+          {/* --- 프로필 상단 스켈레톤 --- */}
+          <div className="flex gap-6">
+            <div className="flex-1 border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-6">
+                  <div className="w-24 h-24 rounded-full bg-gray-200 animate-pulse" />
+                  <div className="flex flex-col gap-2 pt-2">
+                    <div className="h-8 bg-gray-200 rounded w-32 animate-pulse" />
+                    <div className="flex flex-wrap gap-2">
+                      <div className="h-6 bg-gray-200 rounded w-20 animate-pulse" />
+                      <div className="h-6 bg-gray-200 rounded w-24 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-6">
+                <div className="bg-gray-100 rounded-lg p-4 h-20 animate-pulse" />
+                <div className="bg-gray-100 rounded-lg p-4 h-20 animate-pulse" />
+                <div className="bg-gray-100 rounded-lg p-4 h-20 animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          {/* --- 탭 메뉴 스켈레톤 --- */}
+          <div className="border border-gray-200 rounded-lg bg-white shadow-sm">
+            <div className="flex border-b border-gray-200">
+              <div className="flex-1 py-3 h-12 bg-gray-100 animate-pulse" />
+              <div className="flex-1 py-3 h-12 bg-white" />
+              <div className="flex-1 py-3 h-12 bg-white" />
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="space-y-2">
+                <div className="h-5 bg-gray-200 rounded w-24 animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-full animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-5 bg-gray-200 rounded w-24 animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-full animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-full animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-4/5 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function ProfileModal({
@@ -79,7 +155,7 @@ export function ProfileModal({
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [isBioExpanded, setIsBioExpanded] = useState(false);
-  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false); // State for EditProfileModal
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const isCurrentUser = loggedInUser?.userId === userId;
@@ -93,20 +169,10 @@ export function ProfileModal({
           client.get<UserProfile>(`/profile/user/${userId}`),
           client.get<Post[]>(`/users/${userId}/posts`),
           client.get<Post[]>(`/users/${userId}/participations`),
-          // API 응답이 POST가 아닌 GET으로 추정됩니다.
           client.get<Review[]>(`/reviews/user/${userId}`),
         ]);
 
-      // [디버그용] 참여한 동행 데이터 확인
-      // console.log(
-      //   'GET /users/{userId}/participations 응답:',
-      //   participatedPostsRes.data
-      // );
-      console.log('GET /profile/review/{userId} 응답', reviewsRes.data);
-      // console.log('GET /profile/user/{userId} 응답', profileRes.data);
-
       setProfile(profileRes.data);
-      //imageId가 있으면 url 호출
       if (profileRes.data.profileImageId) {
         try {
           const presignedRes = await client.get<{ url: string }>(
@@ -122,22 +188,19 @@ export function ProfileModal({
       }
       setError(null);
 
-      // 작성한 동행과 참여한 동행 목록을 합치고 중복을 제거합니다.
       const written = writtenPostsRes.data || [];
       const participated = Array.isArray(participatedPostsRes.data)
         ? participatedPostsRes.data
         : [];
       const combinedPosts = [...written, ...participated];
-
-      // ID를 기준으로 중복을 제거하고, 최신순(createdAt)으로 정렬합니다.
       const uniquePosts = Array.from(
         new Map(combinedPosts.map((post) => [post.id, post])).values()
       ).sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-
       setTravelHistory(uniquePosts);
+
       const reviewsData = reviewsRes.data;
       setReviews(reviewsData);
       const reviewerIdsWithImages = reviewsData
@@ -197,16 +260,33 @@ export function ProfileModal({
   useEffect(() => {
     if (open && userId) {
       fetchProfileData();
+    } else if (!open) {
+      // 모달이 닫힐 때 내부 상태를 초기화합니다.
+      // 닫기 애니메이션 시간을 고려하여 약간의 딜레이를 줍니다.
+      const timer = setTimeout(() => {
+        setIsLoading(true);
+        setProfile(null);
+        setError(null);
+        setActiveTab('overview');
+        setProfileImageUrl(null);
+        setTravelHistory([]);
+        setReviews([]);
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [open, userId, fetchProfileData]);
 
   const handleEditProfile = () => {
-    setIsEditProfileModalOpen(true); // Open the EditProfileModal
+    setIsEditProfileModalOpen(true);
   };
 
   const handleCardClick = (post: Post) => {
-    onViewPost(post.id); // 게시글 상세 보기로 이동
+    onViewPost(post.id);
   };
+
+  if (!open) {
+    return null;
+  }
 
   if (error) {
     return (
@@ -216,7 +296,12 @@ export function ProfileModal({
             <p className="text-gray-700">
               프로필 정보를 불러오는 중 오류가 발생했습니다.
             </p>
-            <Button onClick={() => fetchProfileData()}>다시 시도</Button>
+            <Button
+              onClick={() => fetchProfileData()}
+              className="bg-gray-900 text-white hover:bg-gray-700"
+            >
+              다시 시도
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -224,16 +309,7 @@ export function ProfileModal({
   }
 
   if (isLoading || !profile) {
-    //setProfileImageUrl(null);
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[80vh]">
-          <div className="flex items-center justify-center h-full">
-            프로필 정보를 불러오는 중입니다...
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+    return <ProfileModalSkeleton open={open} onOpenChange={onOpenChange} />;
   }
 
   const rawMannerTemperature =
@@ -256,17 +332,14 @@ export function ProfileModal({
           aria-describedby={undefined}
         >
           <DialogHeader className="flex flex-row items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10 text-left">
-            <DialogTitle className="text-gray-900">
+            <DialogTitle className="text-gray-900 font-bold">
               {profile.nickname}님의 프로필
             </DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => onOpenChange(false)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <X className="w-5 h-5" />
+              </Button>
+            </DialogClose>
           </DialogHeader>
 
           <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50 no-scrollbar">
@@ -275,14 +348,14 @@ export function ProfileModal({
               <div className="flex-1 border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-6">
-                    <div className="w-24 h-24 flex items-center justify-center">
+                    <div className="w-24 h-24 flex-shrink-0 flex items-center justify-center">
                       <ImageWithFallback
                         src={
                           profileImageUrl ||
                           `https://ui-avatars.com/api/?name=${profile?.nickname}&background=random`
                         }
                         alt={profile.nickname}
-                        className="w-24 h-24 rounded-full object-cover object-center ring-2 ring-gray-100"
+                        className="w-24 h-24 rounded-full object-cover object-center ring-2 ring-white"
                       />
                     </div>
                     <div className="flex flex-col gap-2 pt-2">
@@ -291,7 +364,10 @@ export function ProfileModal({
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {profile.travelStyles?.map((style) => (
-                          <Badge key={style} variant="secondary">
+                          <Badge
+                            key={style}
+                            className="bg-gray-800 text-gray-100 hover:bg-gray-700"
+                          >
                             {translateKeyword(style)}
                           </Badge>
                         ))}
@@ -301,9 +377,8 @@ export function ProfileModal({
                   {isCurrentUser && (
                     <div className="flex gap-2 flex-shrink-0">
                       <Button
-                        variant="outline"
                         size="sm"
-                        className="h-9"
+                        className="h-9 bg-gray-900 text-white hover:bg-gray-700"
                         onClick={handleEditProfile}
                       >
                         <Pencil className="w-4 h-4 mr-2" />
@@ -325,8 +400,8 @@ export function ProfileModal({
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 mt-6">
-                  <div className="bg-gray-50 rounded-lg p-4 text-center">
-                    <p className="text-gray-500 text-sm mb-1">매너온도</p>
+                  <div className="bg-gray-100 rounded-lg p-4 text-center">
+                    <p className="text-gray-600 text-sm mb-1">매너온도</p>
                     <div className="flex items-center justify-center gap-1 text-blue-600 font-semibold">
                       <Thermometer className="w-4 h-4" />
                       <p>
@@ -336,14 +411,14 @@ export function ProfileModal({
                       </p>
                     </div>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4 text-center">
-                    <p className="text-gray-500 text-sm mb-1">여행횟수</p>
-                    <div className="flex items-center justify-center gap-1 font-semibold">
+                  <div className="bg-gray-100 rounded-lg p-4 text-center">
+                    <p className="text-gray-600 text-sm mb-1">여행횟수</p>
+                    <div className="flex items-center justify-center gap-1 font-semibold text-gray-900">
                       <Car className="w-4 h-4" />
                       <p>{travelHistory.length}회</p>
                     </div>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="bg-gray-100 rounded-lg p-4 text-center flex items-center justify-center">
                     <p className="font-semibold text-green-600">
                       ✅ 본인인증 완료
                     </p>
@@ -401,7 +476,7 @@ export function ProfileModal({
                       {(profile.description?.split('\n').length > 3 ||
                         (profile.description &&
                           profile.description.length > 150)) && (
-                        <button // 더보기/접기 버튼 조건 수정
+                        <button
                           onClick={() => setIsBioExpanded(!isBioExpanded)}
                           className="w-full mt-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1"
                         >
@@ -421,7 +496,10 @@ export function ProfileModal({
                       {profile.tendency?.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {profile.tendency.map((tendency) => (
-                            <Badge key={tendency} variant="secondary">
+                            <Badge
+                              key={tendency}
+                              className="bg-gray-800 text-gray-100 hover:bg-gray-700"
+                            >
                               {translateKeyword(tendency)}
                             </Badge>
                           ))}
@@ -436,7 +514,7 @@ export function ProfileModal({
                 )}
 
                 {activeTab === 'history' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {travelHistory.length > 0 ? (
                       travelHistory.map((post) => (
                         <WorkspaceCard
@@ -446,7 +524,7 @@ export function ProfileModal({
                         />
                       ))
                     ) : (
-                      <p className="text-gray-500 col-span-2 text-center py-8">
+                      <p className="text-gray-500 col-span-3 text-center py-8">
                         여행 기록이 없습니다.
                       </p>
                     )}
@@ -518,36 +596,17 @@ export function ProfileModal({
       {profile && (
         <EditProfileModal
           open={isEditProfileModalOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              // 모달이 닫힐 때 프로필 데이터를 다시 불러옵니다.
-              fetchProfileData();
-            }
-            setIsEditProfileModalOpen(open);
+          onOpenChange={setIsEditProfileModalOpen}
+          onProfileUpdated={() => {
+            fetchProfileData();
           }}
-          // onProfileUpdated={(updates) => {
-          //   setProfile((prev) =>
-          //     prev
-          //       ? {
-          //           ...prev,
-          //           nickname: updates.nickname,
-          //           intro: updates.intro,
-          //           description: updates.description,
-          //           travelStyles: updates.travelStyles,
-          //           tendency: updates.tendency,
-          //           profileImageId:
-          //             updates.profileImageId ?? prev.profileImageId,
-          //         }
-          //       : prev
-          //   );
-          // }}
           user={{
             id: profile.id,
             nickname: profile.nickname,
             email: loggedInUser?.profile?.email,
             profileImageId: profile.profileImageId ?? null,
-            intro: profile.intro || '', // profile.intro를 intro로 직접 전달
-            description: profile.description || '', // profile.description을 description으로 직접 전달
+            intro: profile.intro || '',
+            description: profile.description || '',
             travelStyles: (profile.travelStyles || []) as TravelStyleType[],
             tendency: (profile.tendency || []) as TravelTendencyType[],
             gender: profile.gender as GenderType,

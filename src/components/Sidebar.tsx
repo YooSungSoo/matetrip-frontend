@@ -222,20 +222,7 @@ export function Sidebar({
           <div
             className="flex justify-center items-center overflow-hidden transition-all duration-300"
             style={{ height: isExpanded ? 'auto' : '100px' }}
-          >
-            <div
-              className={`transition-transform duration-500 ease-in-out ${isExpanded ? '' : 'rotate-90 w-[100px]'}`}
-            >
-              <div
-                className="text-xl whitespace-nowrap text-center"
-                style={{
-                  fontFamily: 'Princess Sofia, cursive',
-                }}
-              >
-                Mate Trip
-              </div>
-            </div>
-          </div>
+          ></div>
         </nav>
 
         {/* Bottom Section */}
@@ -268,7 +255,7 @@ export function Sidebar({
                 {isExpanded && (
                   <div className="flex-1 text-left overflow-hidden transition-all duration-300">
                     <p className="text-sm font-normal text-gray-900 truncate">
-                      내 프로필
+                      {user?.profile.nickname}
                     </p>
                   </div>
                 )}

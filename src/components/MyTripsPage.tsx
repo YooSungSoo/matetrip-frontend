@@ -17,7 +17,8 @@ export function MyTripsPage({
   isLoggedIn,
   fetchTrigger,
 }: MyTripsPageProps) {
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [plannedPosts, setPlannedPosts] = useState<Post[]>([]);
+  const [participatingPosts, setParticipatingPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user, isAuthLoading } = useAuthStore();
 
@@ -39,13 +40,24 @@ export function MyTripsPage({
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
-          setUserPosts(sortedUserPosts);
-          console.log(
-            `${user.profile.nickname}님이 참여중인 여행`,
-            sortedUserPosts
+
+          const planned = sortedUserPosts.filter(
+            (post) => post.writer && post.writer.id === user.userId
           );
+          const participating = sortedUserPosts.filter(
+            (post) =>
+              post.writer &&
+              post.writer.id !== user.userId &&
+              post.participations.some(
+                (p) => p.requester.id === user.userId && p.status === '승인'
+              )
+          );
+
+          setPlannedPosts(planned);
+          setParticipatingPosts(participating);
         } else {
-          setUserPosts([]);
+          setPlannedPosts([]);
+          setParticipatingPosts([]);
         }
       } catch (error) {
         console.error('Failed to fetch user posts:', error);
@@ -55,7 +67,7 @@ export function MyTripsPage({
     };
 
     fetchUserPosts();
-  }, [isLoggedIn, user?.userId, user?.profile.nickname, isAuthLoading, fetchTrigger]);
+  }, [isLoggedIn, user?.userId, isAuthLoading, fetchTrigger]);
 
   return (
     <div className="bg-white min-h-screen">
@@ -92,13 +104,13 @@ export function MyTripsPage({
                 <MainPostCardSkeleton key={index} />
               ))}
             </div>
-          ) : userPosts.length === 0 ? (
+          ) : participatingPosts.length === 0 ? (
             <div className="text-center text-gray-500 py-10">
-              참여중인 게시글이 없습니다.
+              참여중인 여행이 없습니다.
             </div>
           ) : (
             <WorkspaceCarousel
-              posts={userPosts}
+              posts={participatingPosts}
               onCardClick={(post) => onViewPost(post.id)}
             />
           )}
@@ -122,13 +134,13 @@ export function MyTripsPage({
                 <MainPostCardSkeleton key={index} />
               ))}
             </div>
-          ) : userPosts.length === 0 ? (
+          ) : plannedPosts.length === 0 ? (
             <div className="text-center text-gray-500 py-10">
               작성한 게시글이 없습니다.
             </div>
           ) : (
             <WorkspaceCarousel
-              posts={userPosts}
+              posts={plannedPosts}
               onCardClick={(post) => onViewPost(post.id)}
             />
           )}
@@ -137,4 +149,3 @@ export function MyTripsPage({
     </div>
   );
 }
-

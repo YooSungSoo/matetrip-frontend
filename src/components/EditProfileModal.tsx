@@ -21,14 +21,7 @@ import type { MbtiType } from '../constants/mbti.ts';
 interface EditProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // onProfileUpdated?: (updates: {
-  //   nickname: string;
-  //   intro: string;
-  //   description: string;
-  //   travelStyles: TravelStyleType[];
-  //   tendency: TravelTendencyType[];
-  //   profileImageId: string | null;
-  // }) => void;
+  onProfileUpdated: () => void;
   user: {
     id: string;
     nickname: string;
@@ -46,7 +39,7 @@ interface EditProfileModalProps {
 export function EditProfileModal({
   open,
   onOpenChange,
-  //onProfileUpdated,
+  onProfileUpdated,
   user,
 }: EditProfileModalProps) {
   const [activeTab, setActiveTab] = useState('edit');
@@ -395,6 +388,7 @@ export function EditProfileModal({
       setPendingProfileImageFile(null);
       updateProfileImagePreview(null);
       setCurrentProfileImageId(nextProfileImageId ?? null);
+      onProfileUpdated();
       onOpenChange(false);
       //   window.location.reload();
     } catch (error) {
