@@ -67,7 +67,7 @@ export function MatchingSearchBar({ onSearchSuccess }: MatchingSearchBarProps) {
 
   const buildMatchingInfo = (candidate: MatchCandidateDto): MatchingInfo => ({
     score: Math.round((candidate.score ?? 0) * 100),
-    vectorscore:
+    vectorScore:
       candidate.vectorScore !== undefined
         ? Math.round(candidate.vectorScore * 100)
         : undefined,

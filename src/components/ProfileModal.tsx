@@ -389,7 +389,10 @@ export function ProfileModal({
                           variant="outline"
                           size="sm"
                           className="h-9"
-                          onClick={onLogoutClick}
+                          onClick={() => {
+                            onLogoutClick();
+                            onOpenChange(false);
+                          }}
                         >
                           <LogOut className="w-4 h-4 mr-2" />
                           로그아웃

@@ -34,8 +34,7 @@ export function MatchingCard({
   writerProfileImageId, // 변경: URL 대신 ID를 받음
 }: MatchingCardProps) {
   const { title, location, startDate, endDate } = post;
-  const { score, tendency, style, vectorscore, mannerTemperature } =
-    matchingInfo;
+  const { score, tendency, style, mannerTemperature, vectorScore } = matchingInfo;
 
   const formatMatchText = (value?: string, fallback = '정보 없음') =>
     value && value.trim().length > 0 ? value : fallback;
@@ -46,8 +45,8 @@ export function MatchingCard({
       : 0;
 
   const safeVectorScore =
-    typeof vectorscore === 'number' && !Number.isNaN(vectorscore)
-      ? Math.min(100, Math.max(0, vectorscore))
+    typeof vectorScore === 'number' && !Number.isNaN(vectorScore)
+      ? Math.min(100, Math.max(0, vectorScore))
       : undefined;
 
   const safeMannerTemp = mannerTemperature ?? 36.5;

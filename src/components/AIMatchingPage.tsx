@@ -9,7 +9,11 @@ import { GridMatchingCard } from './GridMatchingCard';
 import { PostDetail } from './PostDetail';
 import { Dialog, DialogContent } from './ui/dialog';
 import { useAuthStore } from '../store/authStore';
-import type { MatchingInfo, MatchCandidateDto } from '../types/matching';
+import type {
+  MatchingInfo,
+  MatchCandidateDto,
+  MatchRecruitingPostDto,
+} from '../types/matching';
 import { MatchingSearchBar } from './MatchingSearchBar';
 import { toast } from 'sonner';
 import type { MatchingResult } from '../types/matchSearch'; // MatchingResult 타입 임포트
@@ -235,7 +239,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
         post: matchedPost,
         info: {
           score: toPercent(candidate.score),
-          vectorscore:
+          vectorScore:
             candidate.vectorScore !== undefined
               ? toPercent(candidate.vectorScore)
               : undefined,
@@ -324,7 +328,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
     }
   }, [recommendedPosts, searchResults]); // searchResults 의존성 추가
 
-  const handleCardClick = (post: Post) => {
+  const handleCardClick = (post: Post | MatchRecruitingPostDto) => {
     if (!isLoggedIn) {
       window.location.href = '/login';
       return;
@@ -456,7 +460,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
                 </Button>
               </div>
               {searchResults.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-22">
                   {' '}
                   {/* 그리드 클래스 수정 */}
                   {searchResults.map((result, index) => (
@@ -502,7 +506,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
               추천할 동행이 없습니다.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-14 mt-8">
               {recommendedPosts.map((post, index) => (
                 <GridMatchingCard
                   key={post.id}
@@ -602,6 +606,11 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
             if (!open) {
               setProfileUserId(null);
             }
+          }}
+          onViewPost={(postId) => {
+            setShowProfileModal(false); // 프로필 모달 닫기
+            setSelectedPostId(postId); // 게시글 상세 모달을 위해 ID 설정
+            setIsModalOpen(true); // 게시글 상세 모달 열기
           }}
         />
       )}
