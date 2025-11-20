@@ -85,12 +85,10 @@ export function useChatSocket(workspaceId: string) {
       return;
     }
 
-    const socket = io(`${WEBSOCKET_CHAT_URL}`, {
-      path: '/ws/chat',     
-      transports: ['websocket'],
-      query: { workspaceId, username }, // 초기 연결 시 쿼리 파라미터로 전달
-      withCredentials: true,
-    });
+    const socket = io(`${WEBSOCKET_CHAT_URL}/chat`, {
+			transports: ['websocket'],
+			query: { workspaceId, username }, // 초기 연결 시 쿼리 파라미터로 전달
+		});
     socketRef.current = socket;
 
     socket.on('connect', () => {
