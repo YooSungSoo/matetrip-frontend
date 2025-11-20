@@ -4,7 +4,6 @@ import {
   MapPin,
   Calendar,
   Users,
-  User,
   Thermometer,
   Trash2,
   MoreVertical,
@@ -104,7 +103,13 @@ export function PostDetail({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
   const [recommendedUserProfiles, setRecommendedUserProfiles] = useState<
-    Record<string, { nickname: string; profileImageId?: string } | null>
+    Record<
+      string,
+      {
+        nickname: string;
+        imageUrl?: string | null;
+      } | null
+    >
   >({});
 
   const fetchPostDetail = useCallback(async () => {
@@ -229,63 +234,75 @@ export function PostDetail({
   // 추천 유저 프로필 로드
   useEffect(() => {
     let cancelled = false;
-    
-    if (!post?.matchResult || post.matchResult.length === 0) {
+
+    const matchResult = post?.matchResult;
+
+    if (!matchResult || matchResult.length === 0) {
       setRecommendedUserProfiles({});
       return;
     }
-
-    const userIds = post.matchResult
-      .slice(0, 3) // 상위 3명만
-      .map((candidate) => candidate.userId)
-      .filter((id): id is string => Boolean(id));
-
-    if (!userIds.length) {
-      setRecommendedUserProfiles({});
-      return;
-    }
-
+    //추천 유저 프로필 이미지 presignedurl
     (async () => {
       try {
-        const results = await Promise.all(
-          userIds.map(async (userId) => {
-            try {
-              const { data } = await client.get<{
-                id: string;
-                nickname: string;
-                profileImageId?: string;
-              }>(`/profile/user/${userId}`);
-              return {
-                userId,
-                profile: {
-                  nickname: data.nickname,
-                  profileImageId: data.profileImageId,
-                },
-              };
-            } catch (err) {
-              console.error(
-                `PostDetail recommended user profile load failed for ${userId}:`,
-                err
-              );
-              return { userId, profile: null };
+        const entries = await Promise.all(
+          matchResult.slice(0, 3).map(async (candidate) => {
+            const profile = candidate.profile;
+
+            if (!profile?.nickname) {
+              return [candidate.userId, null] as const;
             }
+
+            let imageUrl: string | null = null;
+            const profileImageId =
+              profile.profileImageId === null
+                ? undefined
+                : profile.profileImageId;
+
+            if (profileImageId) {
+              try {
+                const { data } = await client.get<{ url: string }>(
+                  `/binary-content/${profileImageId}/presigned-url`
+                );
+                imageUrl = data.url;
+              } catch (err) {
+                console.error(
+                  `PostDetail recommended user image load failed for ${profileImageId}:`,
+                  err
+                );
+                imageUrl = null;
+              }
+            }
+
+            return [
+              candidate.userId,
+              {
+                nickname: profile.nickname,
+                imageUrl,
+              },
+            ] as const;
           })
         );
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         const nextMap: Record<
           string,
-          { nickname: string; profileImageId?: string } | null
+          {
+            nickname: string;
+            imageUrl?: string | null;
+          } | null
         > = {};
-        for (const { userId, profile } of results) {
-          nextMap[userId] = profile;
-        }
+
+        entries.forEach(([userId, entry]) => {
+          nextMap[userId] = entry;
+        });
+
         setRecommendedUserProfiles(nextMap);
       } catch (err) {
-        console.error('PostDetail recommended user profiles batch load failed:', err);
+        console.error(
+          'PostDetail recommended user images batch load failed:',
+          err
+        );
       }
     })();
 
@@ -831,32 +848,51 @@ export function PostDetail({
                   AI 추천 동행 (상위 {Math.min(post.matchResult.length, 3)}명)
                 </h3>
                 <div className="space-y-3">
-                  {post.matchResult.slice(0, 3).map((candidate) => (
-                    <div
-                      key={candidate.userId}
-                      className="flex items-center gap-3 p-3 bg-white rounded-lg border"
-                    >
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-6 h-6 text-gray-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-semibold">
-                          {recommendedUserProfiles[candidate.userId]?.nickname || '사용자'}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          매칭률: {Math.round(candidate.score * 100)}%
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-7"
-                        onClick={() => handleViewProfile(candidate.userId)}
+                  {post.matchResult.slice(0, 3).map((candidate) => {
+                    const recommendedProfile =
+                      recommendedUserProfiles[candidate.userId];
+
+                    const fallbackAvatarName =
+                      recommendedProfile?.nickname ||
+                      candidate.profile?.nickname ||
+                      'user';
+
+                    return (
+                      <div
+                        key={candidate.userId}
+                        className="flex items-center gap-3 p-3 bg-white rounded-lg border"
                       >
-                        프로필 보기
-                      </Button>
-                    </div>
-                  ))}
+                        <ImageWithFallback
+                          src={
+                            recommendedProfile?.imageUrl ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                              fallbackAvatarName
+                            )}&background=random&rounded=true`
+                          }
+                          alt={fallbackAvatarName}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-gray-100"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 font-semibold">
+                            {recommendedProfile?.nickname ||
+                              candidate.profile?.nickname ||
+                              '사용자'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            매칭률: {Math.round(candidate.score * 100)}%
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => handleViewProfile(candidate.userId)}
+                        >
+                          프로필 보기
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

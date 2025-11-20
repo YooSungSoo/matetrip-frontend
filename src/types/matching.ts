@@ -2,7 +2,7 @@ import type { TravelStyleType } from '../constants/travelStyle';
 import type { TravelTendencyType } from '../constants/travelTendencyType';
 import type { KeywordValue } from '../utils/keyword';
 import type { PostStatus, Participation } from './post';
-import type { User } from './user';
+import type { User, UserProfile } from './user';
 
 export type KeywordType = string;
 
@@ -32,7 +32,7 @@ export interface MatchCandidateDto {
   overlappingTravelStyles: TravelStyleType[];
   overlappingTendencies: TravelTendencyType[];
   mbtiMatchScore: number;
-  profileImageId?: string | null; // 추가된 필드
+  profile?: Partial<UserProfile> & { profileImageId?: string | null };
   recruitingPosts?: MatchRecruitingPostDto[];
 }
 
