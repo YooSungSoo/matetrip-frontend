@@ -7,23 +7,23 @@ import {
   Outlet,
 } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { MainPage as AIMatchingPageComponent } from './components/AIMatchingPage';
-import { NewMainPage } from './components/NewMainPage';
-import { AllPostsPage } from './components/AllPostsPage';
-import { MyTripsPage } from './components/MyTripsPage';
-import { AIChatPage } from './components/AIChatPage';
+import { MainPage as AIMatchingPageComponent } from './page/AIMatchingPage';
+import { NewMainPage } from './page/NewMainPage';
+import { AllPostsPage } from './page/AllPostsPage';
+import { MyTripsPage } from './page/MyTripsPage';
+import { AIChatPage } from './page/AIChatPage';
 import { AIChatPanel } from './components/AIChatPanel';
-import { InspirationPage } from './components/InspirationPage';
-import { InspirationDetail } from './components/InspirationDetail';
+import { InspirationPage } from './page/InspirationPage';
+import { InspirationDetail } from './page/InspirationDetail';
 import { SearchResults } from './components/SearchResults';
-import { PostDetail } from './components/PostDetail';
-import { Workspace } from './components/Workspace';
+import { PostDetail } from './page/PostDetail';
+import { Workspace } from './page/Workspace';
 import { CreatePostModal } from './components/CreatePostModal';
 import { EditPostModal } from './components/EditPostModal';
-import { Login } from './components/Login';
-import { Signup } from './components/Signup';
-import { ReviewPage } from './components/ReviewPage';
-import { NotFound } from './components/NotFound';
+import { Login } from './page/Login';
+import { Signup } from './page/Signup';
+import { ReviewPage } from './page/ReviewPage';
+import { NotFound } from './page/NotFound';
 import { useAuthStore } from './store/authStore'; // Zustand 스토어 임포트
 import { NotificationListener } from './components/NotificationListener';
 import client from './api/client';
