@@ -189,10 +189,8 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
       return;
     }
 
-    const socket = io(`${WEBSOCKET_POI_URL}`, {
-      path: '/ws/poi',  
+    const socket = io(`${WEBSOCKET_POI_URL}/poi`, {
       transports: ['websocket'],
-      withCredentials: true,
     });
     socketRef.current = socket;
 
