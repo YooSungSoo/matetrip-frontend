@@ -37,6 +37,7 @@ interface ProfileModalProps {
   userId: string | null;
   onViewPost: (postId: string) => void;
   onLogoutClick?: () => void;
+  onProfileUpdated?: () => void;
 }
 
 interface Review {
@@ -143,6 +144,7 @@ export function ProfileModal({
   userId,
   onViewPost,
   onLogoutClick,
+  onProfileUpdated,
 }: ProfileModalProps) {
   const { user: loggedInUser } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -602,6 +604,7 @@ export function ProfileModal({
           onOpenChange={setIsEditProfileModalOpen}
           onProfileUpdated={() => {
             fetchProfileData();
+            onProfileUpdated?.();
           }}
           user={{
             id: profile.id,

@@ -242,6 +242,10 @@ export default function App() {
 
   const [fetchTrigger, setFetchTrigger] = useState(0);
 
+  const handleProfileUpdated = () => {
+    setFetchTrigger((prev) => prev + 1);
+  };
+
   // 앱이 처음 로드될 때 쿠키를 통해 로그인 상태를 확인합니다.
   // checkAuth 함수는 Zustand 스토어에 의해 안정적으로 제공되므로 의존성 배열에 포함해도 안전합니다.
   useEffect(() => {
@@ -496,6 +500,7 @@ setShowEditPost(true);
         userId={profileModalState.userId}
         onViewPost={handleViewPost}
         onLogoutClick={handleLogout}
+        onProfileUpdated={handleProfileUpdated}
       />
     </div>
   );

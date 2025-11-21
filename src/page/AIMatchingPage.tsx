@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapPin, Search as SearchIcon } from 'lucide-react'; // SearchIcon 추가
 import { Button } from '../components/ui/button';
 import client from '../api/client';
-import { type Post } from '../types/post';
+import { type Post, type Writer } from '../types/post';
 import { MainPostCardSkeleton } from '../components/AIMatchingSkeletion';
 import { MatchingCarousel } from '../components/MatchingCarousel';
 import { GridMatchingCard } from '../components/GridMatchingCard';
@@ -13,6 +13,7 @@ import type {
   MatchingInfo,
   MatchCandidateDto,
   MatchRecruitingPostDto,
+  MatchResponseDto,
 } from '../types/matching';
 import { MatchingSearchBar } from '../components/MatchingSearchBar';
 import { toast } from 'sonner';
@@ -34,9 +35,9 @@ interface MainPageProps {
   fetchTrigger: number;
 }
 
-const normalizeOverlapText = (values?: unknown): string | undefined => {
+const normalizeTextList = (values?: unknown): string[] => {
   if (!values) {
-    return undefined;
+    return [];
   }
 
   const arrayValues = Array.isArray(values) ? values : [values];
@@ -66,19 +67,90 @@ const normalizeOverlapText = (values?: unknown): string | undefined => {
     .map((text) => text.trim())
     .filter((text) => text.length > 0);
 
+  return normalized;
+};
+
+const normalizeOverlapText = (values?: unknown): string | undefined => {
+  const normalized = normalizeTextList(values);
   if (!normalized.length) {
     return undefined;
   }
-
   return normalized.join(', ');
 };
 
+const toPercent = (value?: number) => {
+  if (value === undefined || value === null) {
+    return 0;
+  }
+  return Math.round(value <= 1 ? value * 100 : value);
+};
+
+const buildWriterFromCandidate = (
+  candidate: MatchCandidateDto
+): Writer | undefined => {
+  const profile = candidate.profile;
+  if (!profile) {
+    return undefined;
+  }
+
+  const travelStyles = Array.isArray(profile.travelStyles)
+    ? profile.travelStyles.map((style) => String(style))
+    : [];
+  const tendencies = Array.isArray(profile.tendency)
+    ? profile.tendency.map((tendency) => String(tendency))
+    : [];
+
+  return {
+    id: candidate.userId,
+    email: '',
+    profile: {
+      id: profile.id ?? candidate.userId,
+      nickname: profile.nickname ?? '작성자',
+      gender: profile.gender ?? '',
+      description: profile.description ?? '',
+      intro: profile.intro ?? '',
+      mbtiTypes: profile.mbtiTypes ?? '',
+      travelStyles,
+      tendency: tendencies,
+      profileImageId:
+        profile.profileImageId ?? candidate.profileImageId ?? undefined,
+    },
+  };
+};
+
+const normalizeKeywords = (keywords?: KeywordValue[]) =>
+  normalizeTextList(keywords);
+
+const convertRecruitingPostToPost = (
+  recruitingPost: MatchRecruitingPostDto,
+  candidate: MatchCandidateDto,
+  writer?: Writer
+): Post => {
+  return {
+    id: recruitingPost.id,
+    writerId: recruitingPost.writerId ?? candidate.userId,
+    writerProfile: undefined,
+    writer: recruitingPost.writer ?? writer,
+    createdAt: recruitingPost.createdAt ?? new Date().toISOString(),
+    title: recruitingPost.title,
+    content: recruitingPost.content ?? '',
+    status: recruitingPost.status ?? '모집중',
+    location: recruitingPost.location,
+    maxParticipants: recruitingPost.maxParticipants,
+    keywords: normalizeKeywords(recruitingPost.keywords),
+    startDate: recruitingPost.startDate ?? '',
+    endDate: recruitingPost.endDate ?? '',
+    participations: recruitingPost.participations ?? [],
+    imageId: recruitingPost.imageId ?? null,
+    matchResult: undefined,
+  };
+};
+
 export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
-  const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user, isAuthLoading } = useAuthStore();
   const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
-  const [_isMatchesLoading, setIsMatchesLoading] = useState(true);
+  const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
 
   // 모달 상태 관리
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -113,43 +185,18 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
       return;
     }
 
-    const fetchAllPosts = async () => {
-      setIsLoading(true);
-      try {
-        const initialPostsResponse = await client.get<Post[]>('/posts');
-
-        const sortedInitialPosts = initialPostsResponse.data.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-
-        // '최신 동행 모집' 섹션에는 '모집중'인 글만 필터링하여 설정
-        const recruitingPosts = sortedInitialPosts.filter(
-          (post) => post.status === '모집중'
-        );
-        setPosts(recruitingPosts);
-        console.log('최신 동행 글 목록', sortedInitialPosts);
-      } catch (error) {
-        console.error('Failed to fetch posts:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAllPosts();
-  }, [isAuthLoading, fetchTrigger]);
-
-  useEffect(() => {
-    if (isAuthLoading || !isLoggedIn || !user?.userId) {
+    if (!isLoggedIn || !user?.userId) {
+      setMatches([]);
+      setIsLoading(false);
       return;
     }
 
     let isMounted = true;
 
     const fetchMatches = async () => {
-      setIsMatchesLoading(true);
+      setIsLoading(true);
       try {
-        const res = await client.post<MatchCandidateDto[]>(
+        const res = await client.post<MatchCandidateDto[] | MatchResponseDto>(
           '/profile/matching/search',
           {
             limit: 15,
@@ -159,7 +206,10 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
           return;
         }
         console.log('match response', res.data);
-        setMatches(res.data ?? []);
+        const payload = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.matches ?? []);
+        setMatches(payload ?? []);
 
         // TODO: 매너온도 API 연동
         // 향후 백엔드에서 MatchCandidateDto에 mannerTemperature 필드 추가 예정
@@ -171,7 +221,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
         console.error('Failed to fetch matches', err);
       } finally {
         if (isMounted) {
-          setIsMatchesLoading(false);
+          setIsLoading(false);
         }
       }
     };
@@ -182,7 +232,13 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
     return () => {
       isMounted = false;
     };
-  }, [isAuthLoading, isLoggedIn, user?.userId]);
+  }, [
+    fetchTrigger,
+    isAuthLoading,
+    isLoggedIn,
+    profileUpdateTrigger,
+    user?.userId,
+  ]);
 
   useEffect(() => {
     if (!isFilterOpen) {
@@ -203,51 +259,41 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
   }, [isFilterOpen]);
 
   const { recommendedPosts, matchingInfoByPostId } = useMemo(() => {
-    const toPercent = (value?: number) => {
-      if (value === undefined || value === null) {
-        return 0;
-      }
-      return Math.round(value <= 1 ? value * 100 : value);
-    };
-
     const entries: Array<{ post: Post; info: MatchingInfo }> = [];
     const seenPostIds = new Set<string>();
 
     matches.forEach((candidate) => {
-      const matchedPost = posts.find((post) => {
-        const writerIds = [
-          post.writerId,
-          post.writer?.id,
-          post.writerProfile?.id,
-        ].filter(Boolean);
-        return writerIds.includes(candidate.userId);
-      });
-
-      if (!matchedPost || seenPostIds.has(matchedPost.id)) {
-        return;
-      }
-
-      seenPostIds.add(matchedPost.id);
-
+      const writer = buildWriterFromCandidate(candidate);
       const tendencyText = normalizeOverlapText(
         candidate.overlappingTendencies
       );
-
       const styleText = normalizeOverlapText(candidate.overlappingTravelStyles);
 
-      entries.push({
-        post: matchedPost,
-        info: {
-          score: toPercent(candidate.score),
-          vectorScore:
-            candidate.vectorScore !== undefined
-              ? toPercent(candidate.vectorScore)
-              : undefined,
-          tendency: tendencyText,
-          style: styleText,
-          // 매너온도 임시 데이터 (35.0 ~ 40.0 사이 랜덤값)
-          mannerTemperature: Math.floor(Math.random() * 50 + 350) / 10,
-        },
+      (candidate.recruitingPosts ?? []).forEach((matchPost) => {
+        if (seenPostIds.has(matchPost.id)) {
+          return;
+        }
+
+        seenPostIds.add(matchPost.id);
+
+        const normalizedPost = convertRecruitingPostToPost(
+          matchPost,
+          candidate,
+          writer
+        );
+
+        entries.push({
+          post: normalizedPost,
+          info: {
+            score: toPercent(candidate.score),
+            vectorScore:
+              candidate.vectorScore !== undefined
+                ? toPercent(candidate.vectorScore)
+                : undefined,
+            tendency: tendencyText,
+            style: styleText,
+          },
+        });
       });
     });
 
@@ -261,7 +307,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
         {}
       ),
     };
-  }, [matches, posts]);
+  }, [matches]);
 
   // 작성자 프로필 이미지 일괄 로드 (ProfileModal 방식과 동일)
   useEffect(() => {
@@ -356,6 +402,13 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
     ); // 로그 추가
     setSearchResults(results);
     setSearchQueryInfo(query);
+  };
+
+  const handleProfileUpdated = () => {
+    setProfileUpdateTrigger((prev) => prev + 1);
+    setWriterProfileImages({});
+    setSearchResults(null);
+    setSearchQueryInfo(null);
   };
 
   const keywordsText = useMemo(() => {
@@ -614,6 +667,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
             setSelectedPostId(postId); // 게시글 상세 모달을 위해 ID 설정
             setIsModalOpen(true); // 게시글 상세 모달 열기
           }}
+          onProfileUpdated={handleProfileUpdated}
         />
       )}
     </div>
