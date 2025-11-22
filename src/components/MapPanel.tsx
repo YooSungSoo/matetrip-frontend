@@ -1824,6 +1824,11 @@ export function MapPanel({
           </div>
         </div>
       )}
+
+      <div
+        id="map-video-overlay-root"
+        className="pointer-events-none absolute top-3 right-3 z-30 flex flex-col items-end gap-2"
+      />
     </div>
   );
 }

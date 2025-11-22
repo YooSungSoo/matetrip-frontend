@@ -441,6 +441,9 @@ export function Workspace({
       avatar: member.profile.profileImageId
         ? member.profile.profileImageId
         : `https://ui-avatars.com/api/?name=${member.profile.nickname}&background=random`,
+      email: member.email,
+      profileId: member.profile.id,
+      userId: member.id,
     }));
   }, [members]);
 

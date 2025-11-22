@@ -18,6 +18,9 @@ interface Member {
   id: string;
   name: string;
   avatar: string;
+  email?: string;
+  profileId?: string;
+  userId?: string;
 }
 
 interface ChatPanelProps {
@@ -146,14 +149,6 @@ export const ChatPanel = memo(function ChatPanel({
           <div className="flex gap-1">
             <Button
               size="icon"
-              variant="ghost"
-              className="w-9 h-9 text-white hover:bg-blue-800"
-              disabled
-            >
-              <Phone className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
               variant={isVCCallActive ? 'secondary' : 'ghost'}
               className="w-9 h-9 text-white hover:bg-blue-800"
               onClick={handleToggleVideoCall}
@@ -197,6 +192,7 @@ export const ChatPanel = memo(function ChatPanel({
               <VideoChat
                 workspaceId={workspaceId}
                 onClose={handleCloseVideoCall}
+                activeMembers={activeMembers}
               />
             </div>
           </div>

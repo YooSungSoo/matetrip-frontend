@@ -18,4 +18,7 @@ export interface ActiveMember {
   id: string;
   name: string;
   avatar: string;
+  email?: string;
+  profileId?: string;
+  userId?: string;
 }
