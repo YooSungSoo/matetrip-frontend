@@ -5,6 +5,7 @@ import {
   LogIn,
   Heart,
   Sparkles,
+  PlusSquare, // 아이콘 추가
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ export function Sidebar({
   isLoggedIn,
   onLoginClick,
   onProfileClick,
+  onCreatePost,
 }: SidebarProps) {
   const { user } = useAuthStore();
   const location = useLocation();
@@ -97,7 +99,7 @@ export function Sidebar({
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 px-2 py-4 flex flex-col justify-between">
+        <nav className="flex-1 px-2 py-4 flex flex-col">
           <div className="flex flex-col gap-1">
             {/* AI Chat */}
             {/* <button
@@ -220,15 +222,32 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* Vertical Mate Trip Text */}
-          <div
-            className="flex justify-center items-center overflow-hidden transition-all duration-300"
-            style={{ height: isExpanded ? 'auto' : '100px' }}
-          ></div>
+          {/* Spacer */}
+          <div className="flex-grow" />
+
+          {/* 동행 모집 버튼 - 로그인 사용자만 */}
+          {isLoggedIn && (
+            <div className="px-2 mt-4">
+              <Button
+                onClick={onCreatePost}
+                className={`w-full h-12 rounded-[10px] bg-[#356AFF] text-white hover:bg-[#2c5ae9] transition-colors flex items-center justify-center gap-3 ${
+                  isExpanded ? 'px-4' : ''
+                }`}
+                title={!isExpanded ? '동행 모집' : ''}
+              >
+                <PlusSquare className="w-6 h-6 shrink-0" />
+                {isExpanded && (
+                  <span className="font-semibold text-base whitespace-nowrap">
+                    동행 모집
+                  </span>
+                )}
+              </Button>
+            </div>
+          )}
         </nav>
 
         {/* Bottom Section */}
-        <div className="border-t border-gray-200 px-4 py-4">
+        <div className="border-t border-gray-200 px-4 py-4 mt-2">
           {/* Profile or Login Section */}
           {isLoggedIn ? (
             <div

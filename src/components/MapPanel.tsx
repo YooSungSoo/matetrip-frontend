@@ -617,7 +617,25 @@ export function MapPanel({
   const [highlightedPlaceId, setHighlightedPlaceId] = useState<string | null>(
     null
   );
+  const isOptimizingRef = useRef(false);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const itineraryRef = useRef(itinerary);
+
+  useEffect(() => {
+    itineraryRef.current = itinerary;
+  }, [itinerary]);
+
+  const onRouteOptimizedRef = useRef(onRouteOptimized);
+  const onOptimizationCompleteRef = useRef(onOptimizationComplete);
+
+  useEffect(() => {
+    onRouteOptimizedRef.current = onRouteOptimized;
+  }, [onRouteOptimized]);
+
+  useEffect(() => {
+    onOptimizationCompleteRef.current = onOptimizationComplete;
+  }, [onOptimizationComplete]);
 
   const [recommendedRouteInfo, setRecommendedRouteInfo] = useState<
     Record<string, RouteSegment[]>
@@ -1115,17 +1133,22 @@ export function MapPanel({
   }, [recommendedItinerary]);
 
   useEffect(() => {
-    if (!optimizingDayId) return;
+    if (!optimizingDayId) {
+      isOptimizingRef.current = false;
+      return;
+    }
+
+    if (isOptimizingRef.current) return;
 
     console.log(`[Effect] Optimizing route for day: ${optimizingDayId}`);
 
     const optimizeRoute = async () => {
-      const dayPois = itinerary[optimizingDayId];
+      const dayPois = itineraryRef.current[optimizingDayId];
       if (!dayPois) {
         console.warn(
           `[Optimization] No POIs found for day ${optimizingDayId}.`
         );
-        onOptimizationComplete?.();
+        onOptimizationCompleteRef.current?.();
         return;
       }
 
@@ -1135,6 +1158,7 @@ export function MapPanel({
       );
 
       try {
+        isOptimizingRef.current = true;
         const poi_list = dayPois.map((poi) => ({
           id: poi.id,
           latitude: poi.latitude,
@@ -1171,7 +1195,7 @@ export function MapPanel({
             optimizedPoiNames
           );
 
-          onRouteOptimized(optimizingDayId, result.ids);
+          onRouteOptimizedRef.current?.(optimizingDayId, result.ids);
         }
       } catch (error) {
         console.error(
@@ -1179,12 +1203,13 @@ export function MapPanel({
           error
         );
       } finally {
-        onOptimizationComplete?.();
+        isOptimizingRef.current = false;
+        onOptimizationCompleteRef.current?.();
       }
     };
 
     optimizeRoute();
-  }, [optimizingDayId, itinerary, onRouteOptimized, onOptimizationComplete]);
+  }, [optimizingDayId]);
 
   const scheduledPoiData = new Map<string, { label: string; color: string }>();
   dayLayers.forEach((dayLayer) => {

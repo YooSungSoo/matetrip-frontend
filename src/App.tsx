@@ -323,6 +323,11 @@ export default function App() {
     setFetchTrigger((prev) => prev + 1); // fetch 트리거 상태 변경
   };
 
+  const handlePostCreated = () => {
+    setShowCreatePost(false); // 모달 닫기
+    setFetchTrigger((prev) => prev + 1); // 목록 새로고침을 위해 트리거
+  };
+
   const handleAIChatClick = () => {
     setChatPanelOpen(true);
   };
@@ -623,7 +628,10 @@ setShowEditPost(true);
       )} */}
       <AIChatPanel open={chatPanelOpen} onOpenChange={setChatPanelOpen} />
       {showCreatePost && (
-        <CreatePostModal onClose={() => setShowCreatePost(false)} />
+        <CreatePostModal
+          onClose={() => setShowCreatePost(false)}
+          onPostCreated={handlePostCreated}
+        />
       )}
       {showEditPost && selectedPostForEdit && (
         <EditPostModal
