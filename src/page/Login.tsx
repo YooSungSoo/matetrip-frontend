@@ -46,7 +46,7 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
       if (response.status === 200) {
         // 2. 로그인 성공
         onLogin(); // App.tsx의 handleLogin을 호출하여 Zustand 상태를 업데이트합니다.
-        navigate('/'); // 홈으로 이동
+        navigate('/main'); // 메인으로 이동
       }
     } catch (error) {
       // 3. 로그인 실패. axios 에러 객체(AxiosError)로 타입 가드 수행
