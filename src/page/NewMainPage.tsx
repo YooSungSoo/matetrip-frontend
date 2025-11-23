@@ -1,9 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, CheckCircle } from 'lucide-react'; // [수정] CheckCircle 아이콘 임포트
+import {
+  MapPin,
+  Star,
+  CheckCircle,
+  ChevronRight,
+  PlusCircle,
+  Sparkles,
+  Flame,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { PlaceRecommendationSection } from '../components/PlaceRecommendationSection';
-import { InspirationCard } from '../components/InspirationCard';
 import { PostDetail } from './PostDetail';
 import { useAuthStore } from '../store/authStore';
 import client, { API_BASE_URL } from '../api/client';
@@ -15,6 +22,8 @@ import { MainPostCardSkeleton } from '../components/AIMatchingSkeletion';
 import { PoiDetailPanel } from '../components/ScheduleSidebar';
 import PageContainer from '../components/PageContainer';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { ReviewablePlacesCarousel } from '../components/ReviewablePlacesCarousel';
+import { RecommendedPlaceCard } from '../components/RecommendedPlaceCard';
 
 // --- Interfaces ---
 interface PopularPlaceResponse {
@@ -133,24 +142,32 @@ function ReviewablePlaceCard({
 }) {
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-xl shadow-md transition-shadow hover:shadow-lg"
+      className="group flex flex-col w-80 cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg mr-4 flex-shrink-0"
       onClick={onClick}
     >
-      <img
-        src={place.image_url || 'https://via.placeholder.com/300x200'}
-        alt={place.title}
-        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-      <div className="absolute bottom-0 left-0 p-3 w-full">
-        <h3 className="text-md font-bold text-white truncate">{place.title}</h3>
-        <div className="flex items-center gap-1 text-xs text-gray-200 mt-1">
-          <CategoryIcon category={place.category} className="w-3 h-3" />
-          <span>{place.category}</span>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-gray-200 mt-1">
-          <MapPin className="w-3 h-3 flex-shrink-0" />
-          <p className="truncate">{place.address}</p>
+      <div className="relative h-48 bg-gray-300 overflow-hidden w-full">
+        <img
+          src={place.image_url || 'https://via.placeholder.com/300x200'}
+          alt={place.title}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      </div>
+      <div className="flex flex-col flex-1 p-4">
+        <h3 className="text-lg font-bold text-gray-800 leading-snug truncate">
+          {place.title}
+        </h3>
+        <div className="flex flex-col gap-1.5 text-sm text-gray-600 mt-2">
+          <div className="flex items-center gap-1.5">
+            <CategoryIcon
+              category={place.category}
+              className="w-4 h-4 text-gray-400"
+            />
+            <span>{place.category}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-4 h-4 text-gray-400" />
+            <p className="truncate">{place.address}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -320,6 +337,7 @@ function SuccessModal({
 
 // --- Main Component ---
 export function NewMainPage({
+  onCreatePost,
   onJoinWorkspace,
   onViewProfile,
   onEditPost,
@@ -644,14 +662,44 @@ export function NewMainPage({
   return (
     <div className="flex bg-white relative">
       <div className="flex-1 overflow-y-auto">
-        <PageContainer className="flex flex-col gap-y-8 md:gap-y-10 lg:gap-y-12">
+        {/* Section 0: CTA */}
+        {isLoggedIn && (
+          <section
+            className="relative bg-gray-800 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(https://source.unsplash.com/1600x900/?travel,destination)`,
+            }}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              <h2 className="text-3xl font-bold text-white">
+                {user.profile.nickname}님, 새로운 여행을 떠나보세요!
+              </h2>
+              <p className="mt-2 text-gray-200 max-w-2xl">
+                나와 꼭 맞는 동행자와 함께 잊지 못할 추억을 만들 수 있어요.
+                지금 바로 여행 계획을 시작해보세요.
+              </p>
+              <Button
+                onClick={onCreatePost}
+                className="mt-6 bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-6 text-base flex items-center gap-2"
+              >
+                <PlusCircle className="w-5 h-5" />새 동행 만들기
+              </Button>
+            </div>
+          </section>
+        )}
+
+        <PageContainer className="flex flex-col gap-y-12 md:gap-y-16 lg:gap-y-20">
           {/* Section 1: AI 추천 동행 */}
           <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {user?.profile.nickname}님을 위한 맞춤 여행 추천
-                </h2>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-blue-600" />
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {user?.profile.nickname}님을 위한 맞춤 여행 추천
+                  </h2>
+                </div>
                 <p className="text-xs md:text-sm text-gray-600 mt-1">
                   나의 여행 성향을 분석해 MateTrip AI가 찾아낸 최고의 여행
                   파트너예요.
@@ -660,9 +708,10 @@ export function NewMainPage({
               <Button
                 onClick={handleAllViewMatching}
                 variant="ghost"
-                className="text-sm self-start sm:self-auto"
+                className="text-sm self-start sm:self-auto flex items-center text-gray-600 hover:text-gray-900"
               >
-                View All
+                전체보기
+                <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
             {!isLoggedIn ? (
@@ -681,7 +730,7 @@ export function NewMainPage({
                 </Button>
               </div>
             ) : isMatchesLoading || isPostsLoading ? (
-              <div className="grid grid-cols-5 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
                 {Array.from({ length: 5 }).map((_, index) => (
                   <MainPostCardSkeleton key={index} />
                 ))}
@@ -691,7 +740,7 @@ export function NewMainPage({
                 추천할 동행이 없습니다.
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
                 {matchedPosts.map(({ post, score, tendency, style }, index) => (
                   <GridMatchingCard
                     key={post.id}
@@ -722,9 +771,12 @@ export function NewMainPage({
             <section>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-3">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {user?.profile.nickname}님의 리뷰를 기다리는 장소
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <Star className="w-6 h-6 text-yellow-500" />
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {user?.profile.nickname}님의 리뷰를 기다리는 장소
+                    </h2>
+                  </div>
                   <p className="text-xs md:text-sm text-gray-600 mt-1">
                     다녀오신 장소에 대한 리뷰를 남겨주세요!
                   </p>
@@ -798,15 +850,18 @@ export function NewMainPage({
                             ))}
                           </nav>
                         </div>
-                        <div className="grid grid-cols-5 gap-4 md:gap-6 pt-6">
-                          {activeDate &&
-                            placesByDate[activeDate]?.map((place) => (
-                              <ReviewablePlaceCard
-                                key={place.id}
-                                place={place}
-                                onClick={() => handleOpenReviewModal(place)}
-                              />
-                            ))}
+                        <div className="pt-6">
+                          {activeDate && placesByDate[activeDate] && (
+                            <ReviewablePlacesCarousel>
+                              {placesByDate[activeDate].map((place) => (
+                                <ReviewablePlaceCard
+                                  key={place.id}
+                                  place={place}
+                                  onClick={() => handleOpenReviewModal(place)}
+                                />
+                              ))}
+                            </ReviewablePlacesCarousel>
+                          )}
                         </div>
                       </div>
                     );
@@ -823,7 +878,12 @@ export function NewMainPage({
           <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Hot Place</h2>
+                <div className="flex items-center gap-2">
+                  <Flame className="w-6 h-6 text-red-500" />
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Hot Place
+                  </h2>
+                </div>
                 <p className="text-xs md:text-sm text-gray-600 mt-1">
                   MateTrip 유저들의 Pick!
                 </p>
@@ -831,9 +891,10 @@ export function NewMainPage({
               <Button
                 onClick={handleAllViewInspiration}
                 variant="ghost"
-                className="text-sm self-start sm:self-auto"
+                className="text-sm self-start sm:self-auto flex items-center text-gray-600 hover:text-gray-900"
               >
-                View All
+                전체보기
+                <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
             {isInspirationsLoading ? (
@@ -850,20 +911,18 @@ export function NewMainPage({
                 추천할 장소가 없습니다.
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-4 md:gap-6">
-                {inspirations.map((place, index) => (
-                  <InspirationCard
+              <ReviewablePlacesCarousel>
+                {inspirations.map((place) => (
+                  <RecommendedPlaceCard
                     key={place.id}
                     imageUrl={place.imageUrl}
                     title={place.title}
                     address={place.address}
                     category={place.category}
-                    summary={place.summary}
-                    rank={index + 1}
                     onClick={() => handleInspirationClick(place)}
                   />
                 ))}
-              </div>
+              </ReviewablePlacesCarousel>
             )}
           </section>
         </PageContainer>

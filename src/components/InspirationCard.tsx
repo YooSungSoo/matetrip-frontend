@@ -150,55 +150,57 @@ export function InspirationCard({
 
   return (
     <div
-      className="flex flex-col items-start w-full cursor-pointer"
+      className="group flex flex-col w-full cursor-pointer overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-300 hover:shadow-lg"
       onClick={onClick}
     >
-      <div className="flex flex-col gap-3 items-start justify-end w-full">
-        <div
-          className="h-[252px] rounded-2xl w-full bg-cover bg-center relative overflow-hidden group" // group 클래스 추가
-          style={{
-            backgroundColor:
-              !actualImageUrl || isImageLoading ? '#E5E7EB' : undefined,
-            backgroundImage:
-              actualImageUrl && !isImageLoading
-                ? `url(${actualImageUrl})`
-                : undefined,
-          }}
-        >
-          {rank && <MedalIcon rank={rank} />} {/* 메달 아이콘 표시 */}
-          
-          {renderRecommendationReason} {/* 추천 이유 렌더링 */}
+      <div className="flex flex-col items-start w-full">
+        <div className="flex flex-col gap-3 items-start justify-end w-full">
+          <div
+            className="h-[252px] w-full bg-cover bg-center relative overflow-hidden group" // group 클래스 추가
+            style={{
+              backgroundColor:
+                !actualImageUrl || isImageLoading ? '#E5E7EB' : undefined,
+              backgroundImage:
+                actualImageUrl && !isImageLoading
+                  ? `url(${actualImageUrl})`
+                  : undefined,
+            }}
+          >
+            {rank && <MedalIcon rank={rank} />} {/* 메달 아이콘 표시 */}
+            
+            {renderRecommendationReason} {/* 추천 이유 렌더링 */}
 
-          {/* Hover 시 나타나는 dimmed 배경 및 summary */}
-          {summary && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <p className="text-white text-sm text-center line-clamp-6">
-                {summary}
-              </p>
-            </div>
-          )}
-
-          {/* 이미지 위에 장소 이름, 카테고리, 주소 표시 (hover 시 사라짐) */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent rounded-b-2xl transition-opacity duration-300 group-hover:opacity-0">
-            <h3 className="font-bold text-lg text-white leading-[1.4] w-full overflow-hidden whitespace-nowrap text-ellipsis">
-              {title}
-            </h3>
-            {category && (
-              <div className="flex items-center gap-1 text-sm text-white/90 mt-1">
-                <CategoryIcon category={category} className="w-4 h-4" />
-                <span>{category}</span>
+            {/* Hover 시 나타나는 dimmed 배경 및 summary */}
+            {summary && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p className="text-white text-sm text-center line-clamp-6">
+                  {summary}
+                </p>
               </div>
             )}
-            <div className="flex items-center gap-1 text-sm text-white/90 mt-1">
-              <MapPin className="w-4 h-4 flex-shrink-0" />
-              <p className="overflow-hidden whitespace-nowrap text-ellipsis">
-                {address}
-              </p>
+
+            {/* 이미지 위에 장소 이름, 카테고리, 주소 표시 (hover 시 사라짐) */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 group-hover:opacity-0">
+              <h3 className="font-bold text-lg text-white leading-[1.4] w-full overflow-hidden whitespace-nowrap text-ellipsis">
+                {title}
+              </h3>
+              {category && (
+                <div className="flex items-center gap-1 text-sm text-white/90 mt-1">
+                  <CategoryIcon category={category} className="w-4 h-4" />
+                  <span>{category}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-sm text-white/90 mt-1">
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <p className="overflow-hidden whitespace-nowrap text-ellipsis">
+                  {address}
+                </p>
+              </div>
             </div>
           </div>
         </div>
+        {/* 기존 카테고리, 주소, summary 렌더링 부분 제거 */}
       </div>
-      {/* 기존 카테고리, 주소, summary 렌더링 부분 제거 */}
     </div>
   );
 }
