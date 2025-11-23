@@ -500,7 +500,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <div className="flex-1 flex justify-center items-center py-8 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-lg md:max-w-md">
+        <div className="w-full max-w-xl md:max-w-lg">
           <div className="bg-white rounded-2xl md:rounded-3xl shadow-sm overflow-hidden border border-slate-100 relative min-h-[560px] flex flex-col">
             {isSubmitting && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-3">
@@ -555,7 +555,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
 
             {step === 1 && (
               <div className="flex-1 px-5 md:px-6 py-5 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-5 max-w-xl mx-auto w-full">
+                <div className="space-y-5 max-w-xl mx-auto w-full px-6">
                   <div>
                     <Label htmlFor="email" className="font-semibold">
                       이메일
@@ -613,7 +613,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
                     <Label htmlFor="confirmPassword" className="font-semibold">
                       비밀번호 확인
                     </Label>
-                    <div className="relative mt-2">
+                    <div className="relative mt-2 w-full ">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <Input
                         id="confirmPassword"
@@ -678,7 +678,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
                           onChange={(e) =>
                             handleInputChange('gender', e.target.value)
                           }
-                          className="h-4 w-4 accent-[var(--primary)]"
+                          className="h-4 w-4 accent-primary"
                           required
                         />
                         <Label
@@ -698,7 +698,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
                           onChange={(e) =>
                             handleInputChange('gender', e.target.value)
                           }
-                          className="h-4 w-4 accent-[var(--primary)]"
+                          className="h-4 w-4 accent-primary"
                         />
                         <Label
                           htmlFor="female"
@@ -958,7 +958,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
                         <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary bg-primary-10 text-[10px] font-semibold text-primary shadow-[0_1px_3px_rgba(59,130,246,0.25)] hover:bg-primary-10 hover:border-primary transition-colors cursor-default">
                           i
                         </span>
-                        <span className="absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 block w-72 md:w-80 rounded-lg bg-white px-3 py-2 text-[11px] font-medium text-black text-left whitespace-normal break-words shadow-lg opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none transition-all duration-150">
+                        <span className="absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 block w-72 md:w-80 rounded-lg bg-white px-3 py-2 text-[11px] font-medium text-black text-left whitespace-normal wrap-break-word shadow-lg opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none transition-all duration-150 leading-snug">
                           키워드 유사도와 상세소개 유사도를 합산하여 프로필
                           유사도를 측정합니다.
                           <br />

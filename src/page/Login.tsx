@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Map } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Map as MapIcon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -81,9 +81,9 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
         <div className="flex flex-col items-center justify-center mb-6">
           <div className="flex items-center gap-2 mb-2">
             <div className="bg-linear-to-br bg-primary p-2.5 rounded-xl shadow-primary-soft text-white">
-              <Map className="w-7 h-7 text-white" />
+              <MapIcon className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               MateTrip
             </h1>
           </div>
