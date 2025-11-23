@@ -2,87 +2,121 @@
 
 :root {
   --font-size: 16px;
-  --background: #ffffff;
+
+  /* [변경됨] 배경: 연한 크림색 (Warm White) */
+  --background: #fffdf5;
   --foreground: oklch(0.145 0 0);
+
+  /* [유지] 카드: 배경과 구분되도록 완전한 흰색 유지 */
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+
+  --popover: #ffffff;
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #006dff;
-  --primary-strong: #0265e6;
-  --primary-80: rgba(0, 109, 255, 0.8); /* primary with 80% opacity */
-  --primary-10: rgba(0, 109, 255, 0.1); /* primary with 10% opacity */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
+
+  /* Primary: Vivid Orange */
+  --primary: #ff8d21;
+  --primary-strong: #e67a15;
+  --primary-80: rgba(255, 141, 33, 0.8);
+  --primary-10: rgba(255, 141, 33, 0.1);
+  --primary-foreground: #ffffff;
+
+  /* Secondary: Amber/Yellow */
+  --secondary: #ffc107;
+  --secondary-foreground: #212121;
+
+  /* Warm Muted Tones */
+  --muted: #fff8e1;
+  --muted-foreground: #8d6e63;
+
+  /* Accent: UI Hover용 (살구색) */
+  --accent: #ffe0b2;
+  --accent-foreground: #2e1a05;
+
+  /* Point/Destructive: Deep Red/Burnt Orange */
+  --destructive: #d84315;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+
+  /* Border: Light Apricot */
+  --border: #ffe0b2;
+
   --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
+  --input-background: #fff3e0;
+  --switch-background: #e0e0e0;
+
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+
+  --ring: #ff8d21;
+
+  --chart-1: #ff8d21;
+  --chart-2: #ffc107;
+  --chart-3: #d84315;
+  --chart-4: #ffb74d;
+  --chart-5: #8d6e63;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+
+  --sidebar: #fff8e1; /* 사이드바는 배경보다 아주 조금 더 진한 크림색 */
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --shadow-card-soft: 0 8px 20px rgba(15, 23, 42, 0.06);
-  --shadow-card: 0 12px 32px rgba(15, 23, 42, 0.08);
-  --shadow-card-strong: 0 18px 44px rgba(15, 23, 42, 0.12);
-  --shadow-primary-soft: 0 2px 10px rgba(0, 109, 255, 0.18);
+  --sidebar-primary: #ff8d21;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffe0b2;
+  --sidebar-accent-foreground: oklch(0.145 0 0);
+  --sidebar-border: #ffe0b2;
+  --sidebar-ring: #ff8d21;
+
+  --shadow-card-soft: 0 8px 20px rgba(255, 141, 33, 0.06);
+  --shadow-card: 0 12px 32px rgba(255, 141, 33, 0.08);
+  --shadow-card-strong: 0 18px 44px rgba(255, 141, 33, 0.12);
+  --shadow-primary-soft: 0 2px 10px rgba(255, 141, 33, 0.18);
 }
 
 .dark {
+  /* 다크모드: 웜 다크 (Warm Dark) 유지 */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+
+  --primary: #ff8d21;
+  --primary-foreground: oklch(0.145 0 0);
+
+  --secondary: #4a3b20;
+  --secondary-foreground: #ffc107;
+
+  --muted: #3e2723;
+  --muted-foreground: #d7ccc8;
+
+  --accent: #3e2723;
+  --accent-foreground: #ff8d21;
+
+  --destructive: #d84315;
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: #5d4037;
+  --input: #3e2723;
+  --ring: #ff8d21;
+
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+
+  --chart-1: #ff8d21;
+  --chart-2: #ffc107;
+  --chart-3: #d84315;
+  --chart-4: #a1887f;
+  --chart-5: #8d6e63;
+
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: #ff8d21;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #3e2723;
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-border: #5d4037;
+  --sidebar-ring: #ff8d21;
 }
 
 @theme inline {
@@ -134,14 +168,12 @@
   html,
   body {
     height: 100%;
-    /* overflow: hidden; */ /* 이 부분을 제거 */
   }
 
   body {
     @apply bg-background text-foreground;
   }
 
-  /* 공통 카드/모달 그림자 토큰 */
   .shadow-card-soft {
     box-shadow: var(--shadow-card-soft);
   }
@@ -154,7 +186,6 @@
     box-shadow: var(--shadow-card-strong);
   }
 
-  /* Primary palette helpers (only 3 tones) */
   .bg-primary {
     background-color: var(--primary);
   }
@@ -196,9 +227,6 @@
   }
 }
 
-/**
- * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
- */
 @layer base {
   :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {

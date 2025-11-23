@@ -9,6 +9,7 @@ import AIMatching02 from '../image/AIMatching02.jpg';
 import AIMatching03 from '../image/AIMatching03.jpg';
 import AIMatching04 from '../image/AIMatching04.jpg';
 import AIMatching05 from '../image/AIMatching05.jpg';
+import AIMatching06 from '../image/AIMatching06.png';
 import AIPlace01 from '../image/AIPlace01.jpg';
 import AIPlace02 from '../image/AIPlace02.png';
 import AIPlace03 from '../image/AIPlace03.png';
@@ -51,6 +52,7 @@ const placeImages = [
   AIMatching03,
   AIMatching04,
   AIMatching05,
+  AIMatching06,
 ];
 
 export default function RealMainPage() {
@@ -253,19 +255,19 @@ export default function RealMainPage() {
         </div>
 
         {/* Stats + Images Row */}
-        <div className="flex gap-6 px-12">
+        <div className="flex gap-24 px-12">
           {/* Stats - Left Side */}
-          <div className="flex flex-col gap-14 w-[280px] flex-shrink-0">
-            <div className="bg-white border border-black/10 rounded-xl p-7 h-[112px] flex flex-col justify-center relative">
-              <span className="text-3xl font-medium text-gray-900">
-                50,000명 이상
-              </span>
-              <span className="text-sm font-medium text-gray-500">
-                현재까지 누적 회원수
-              </span>
-              <span className="absolute top-8 right-5 text-2xl text-gray-400">
-                +
-              </span>
+          <div className="flex flex-col gap-6 w-[480px] flex-shrink-0">
+            <div className="">
+              <h4 className="text-2xl block font-bold">
+                AI가 <span className="text-primary">완벽한 당신의 메이트</span>
+                를 추천합니다.
+              </h4>
+              <p className="text-sm mt-4">
+                단순한 매칭이 아닙니다. Mate Trip의 독자적인 AI 알고리즘이
+                당신의 여행 스타일, 취향, 성격을 정밀 분석하여 가장 이상적인
+                동행자를 제안합니다.
+              </p>
             </div>
             <div className="bg-white border border-black/10 rounded-xl p-7 h-[112px] flex flex-col justify-center relative">
               <span className="text-3xl font-medium text-gray-900">
@@ -297,7 +299,7 @@ export default function RealMainPage() {
             {placeImages.map((img, index) => (
               <div
                 key={index}
-                className="h-[446px] w-[400px] rounded-lg overflow-hidden flex-shrink-0"
+                className="h-[426px] w-[380px] rounded-lg overflow-hidden flex-shrink-0"
               >
                 <img
                   src={img}
