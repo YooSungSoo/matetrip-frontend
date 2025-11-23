@@ -105,6 +105,7 @@ export interface PlaceMarkerProps {
   scheduledPoiData: Map<string, { label: string; color: string }>;
   recommendedPoiLabelData: Map<string, { label: string; color: string }>;
   highlightedPlaceId: string | null;
+  zoomLevel: number;
 }
 
 export interface PoiMarkerProps {
@@ -125,6 +126,33 @@ export interface DayRouteRendererProps {
   dailyRouteInfo: Record<string, RouteSegment[]>;
   visibleDayIds: Set<string>;
 }
+
+const getCircleMarkerWithIconSvg = (
+  fillColor: string,
+  strokeColor: string,
+  strokeWidth: string,
+  iconSvg: string,
+  opacity: number = 1
+) => {
+  const iconContent = iconSvg.match(/<g.*?>(.*)<\/g>/s)?.[1] || iconSvg;
+
+  const finalIconContent = iconContent.replace(
+    '<circle cx="16" cy="16" r="6" fill="white"/>',
+    '<circle cx="0" cy="0" r="5" fill="white"/>'
+  );
+
+  const svg = `
+    <svg width="44" height="48" viewBox="0 -6 48 52" xmlns="http://www.w3.org/2000/svg">
+      <g opacity="${opacity}">
+        <circle cx="22" cy="22" r="10" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />
+        <g transform="translate(22, 22) scale(0.6)">
+          ${finalIconContent}
+        </g>
+      </g>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
 
 const PlaceInfoWindow = memo(
   ({
@@ -263,6 +291,15 @@ const PlaceMarker = memo(
     );
     const isInfoWindowClickedRef = useRef(false);
 
+    const markedPoi = findPoiByCoordinates(
+      pois,
+      place.latitude,
+      place.longitude
+    );
+    const isInItinerary = markedPoi
+      ? scheduledPoiData.has(markedPoi.id)
+      : false;
+
     useEffect(() => {
       return () => {
         if (infoWindowTimeoutRef.current) {
@@ -298,21 +335,20 @@ const PlaceMarker = memo(
       onPlaceClick(place);
     };
 
-    const getMarkerImageSrc = (place: PlaceDto, markedPoi?: Poi): string => {
+    const getMarkerImageSrc = (
+      place: PlaceDto,
+      markedPoi: Poi | undefined
+    ): string => {
+      const isInItinerary = markedPoi
+        ? scheduledPoiData.has(markedPoi.id)
+        : false;
       const categoryCode = place.category;
-      const isMarkedOnly = markedPoi && markedPoi.status === 'MARKED';
-      const scheduleInfo = markedPoi?.id
-        ? scheduledPoiData.get(markedPoi.id)
-        : undefined;
-      const recommendedLabelInfo = recommendedPoiLabelData.get(place.id);
-      const badgeInfo = scheduleInfo || recommendedLabelInfo;
-
       const categoryInfo =
         CATEGORY_INFO[categoryCode as keyof typeof CATEGORY_INFO];
       const color =
         NEW_CATEGORY_COLORS[categoryCode] || categoryInfo?.color || '#808080';
-      const strokeColor = 'white';
-      const strokeWidth = '2';
+      const strokeColor = '#000000';
+      const strokeWidth = '0.5';
 
       let iconSvg = '';
 
@@ -391,10 +427,25 @@ const PlaceMarker = memo(
             `;
       }
 
+      if (!isInItinerary) {
+        return getCircleMarkerWithIconSvg(
+          color,
+          strokeColor,
+          strokeWidth,
+          iconSvg
+        );
+      }
+      const isMarkedOnly = markedPoi && markedPoi.status === 'MARKED';
+      const scheduleInfo = markedPoi?.id
+        ? scheduledPoiData.get(markedPoi.id)
+        : undefined;
+      const recommendedLabelInfo = recommendedPoiLabelData.get(place.id);
+      const badgeInfo = scheduleInfo || recommendedLabelInfo;
+
       const svg = `
       <svg width="44" height="48" viewBox="0 -6 48 52" xmlns="http://www.w3.org/2000/svg">
         <path d="M20 0C11 0 4 8 4 18c0 12 16 28 16 28s16-16 16-28C36 8 29 0 20 0z"
-              fill="${color}" 
+              fill="#5194F7" 
               stroke="${strokeColor}" stroke-width="${strokeWidth}"/>
         ${
           badgeInfo
@@ -422,35 +473,32 @@ const PlaceMarker = memo(
       return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     };
 
-    const markedPoi = findPoiByCoordinates(
-      pois,
-      place.latitude,
-      place.longitude
-    );
+    const isVisible = true;
+
     const markerImageSrc = getMarkerImageSrc(place, markedPoi);
+    const size = { width: 44, height: 48 };
+    const offset = { x: 22, y: 48 };
+
     const markerImage = {
       src: markerImageSrc,
-      size: { width: 44, height: 48 },
+      size,
       options: {
-        offset: { x: 22, y: 48 },
+        offset,
       },
     };
 
-    const isMarked = !!markedPoi;
     return (
       <>
         <MapMarker
           position={{ lat: place.latitude, lng: place.longitude }}
           image={markerImage}
-          clickable={true}
-          onMouseOver={handleMouseOver}
-          onMouseOut={handleMouseOut}
-          onClick={handleClick}
-          zIndex={
-            scheduledPoiData.has(markedPoi?.id ?? '') ? 3 : isMarked ? 2 : 1
-          }
+          clickable={isVisible}
+          onMouseOver={isVisible ? handleMouseOver : undefined}
+          onMouseOut={isVisible ? handleMouseOut : undefined}
+          onClick={isVisible ? handleClick : undefined}
+          zIndex={isInItinerary ? 2 : 0}
         />
-        {isInfoWindowOpen && (
+        {isVisible && isInfoWindowOpen && (
           <CustomOverlayMap
             position={{ lat: place.latitude, lng: place.longitude }}
             xAnchor={0.5}
@@ -475,7 +523,7 @@ const PlaceMarker = memo(
             </div>
           </CustomOverlayMap>
         )}
-        {place.id === highlightedPlaceId && (
+        {isVisible && place.id === highlightedPlaceId && (
           <CustomOverlayMap
             position={{ lat: place.latitude, lng: place.longitude }}
             zIndex={0}
@@ -506,27 +554,69 @@ const DayRouteRenderer = memo(
       <>
         {segments && segments.length > 0
           ? segments.map((segment, index) => (
-              <Polyline
-                key={`${layer.id}-segment-${index}`}
-                path={segment.path}
-                strokeWeight={5}
-                strokeColor={layer.color}
-                strokeOpacity={isVisible ? 0.9 : 0}
-                strokeStyle={'solid'}
-              />
+              <React.Fragment key={`${layer.id}-segment-${index}`}>
+                <Polyline
+                  path={segment.path}
+                  strokeWeight={10}
+                  strokeColor={'#000000'}
+                  strokeOpacity={isVisible ? 0.9 : 0}
+                  strokeStyle={'solid'}
+                  zIndex={1}
+                />
+                <Polyline
+                  path={segment.path}
+                  strokeWeight={8}
+                  strokeColor={'#5194F7'}
+                  strokeOpacity={isVisible ? 0.9 : 0}
+                  strokeStyle={'solid'}
+                  zIndex={1}
+                />
+                <Polyline
+                  path={segment.path}
+                  strokeWeight={2}
+                  strokeColor={'#FFFFFF'}
+                  strokeOpacity={isVisible ? 0.7 : 0}
+                  strokeStyle={'dash'}
+                  zIndex={1}
+                />
+              </React.Fragment>
             ))
           : dayPois.length > 1 && (
-              <Polyline
-                key={layer.id}
-                path={dayPois.map((poi) => ({
-                  lat: poi.latitude,
-                  lng: poi.longitude,
-                }))}
-                strokeWeight={5}
-                strokeColor={layer.color}
-                strokeOpacity={isVisible ? 0.9 : 0}
-                strokeStyle={'solid'}
-              />
+              <React.Fragment key={layer.id}>
+                <Polyline
+                  path={dayPois.map((poi) => ({
+                    lat: poi.latitude,
+                    lng: poi.longitude,
+                  }))}
+                  strokeWeight={11}
+                  strokeColor={'#888888'}
+                  strokeOpacity={isVisible ? 0.9 : 0}
+                  strokeStyle={'solid'}
+                  zIndex={1}
+                />
+                <Polyline
+                  path={dayPois.map((poi) => ({
+                    lat: poi.latitude,
+                    lng: poi.longitude,
+                  }))}
+                  strokeWeight={8}
+                  strokeColor={'#5194F7'}
+                  strokeOpacity={isVisible ? 0.9 : 0}
+                  strokeStyle={'solid'}
+                  zIndex={1}
+                />
+                <Polyline
+                  path={dayPois.map((poi) => ({
+                    lat: poi.latitude,
+                    lng: poi.longitude,
+                  }))}
+                  strokeWeight={3}
+                  strokeColor={'#FFFFFF'}
+                  strokeOpacity={isVisible ? 0.7 : 0}
+                  strokeStyle={'dash'}
+                  zIndex={1}
+                />
+              </React.Fragment>
             )}
 
         {segments &&
@@ -609,6 +699,7 @@ export function MapPanel({
   const [dailyRouteInfo, setDailyRouteInfo] = useState<
     Record<string, RouteSegment[]>
   >({});
+  const [zoomLevel, setZoomLevel] = useState(3);
   const [visibleCategories, setVisibleCategories] = useState<Set<string>>(
     new Set(Object.keys(CATEGORY_INFO))
   );
@@ -618,7 +709,9 @@ export function MapPanel({
     null
   );
   const isOptimizingRef = useRef(false);
-  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const itineraryRef = useRef(itinerary);
 
@@ -652,7 +745,9 @@ export function MapPanel({
   }, [recommendedItinerary]);
 
   const [chatBubbles, setChatBubbles] = useState<Record<string, string>>({});
-  const chatBubbleTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const chatBubbleTimers = useRef<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
 
   useEffect(() => {
     if (latestChatMessage) {
@@ -678,6 +773,32 @@ export function MapPanel({
       Object.values(chatBubbleTimers.current).forEach(clearTimeout);
     };
   }, [latestChatMessage]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    const handleZoomChanged = () => {
+      setZoomLevel(mapInstance.getLevel());
+    };
+
+    window.kakao.maps.event.addListener(
+      mapInstance,
+      'zoom_changed',
+      handleZoomChanged
+    );
+
+    handleZoomChanged();
+
+    return () => {
+      if (mapInstance) {
+        window.kakao.maps.event.removeListener(
+          mapInstance,
+          'zoom_changed',
+          handleZoomChanged
+        );
+      }
+    };
+  }, [mapInstance]);
 
   useEffect(() => {
     if (mapInstance && initialCenter) {
@@ -1316,6 +1437,24 @@ export function MapPanel({
   );
 
   const filteredPlacesToRender = allPlacesToRender.filter((place) => {
+    const markedPoi = findPoiByCoordinates(
+      pois,
+      place.latitude,
+      place.longitude
+    );
+
+    // Itinerary POIs are controlled *only* by day visibility.
+    if (markedPoi && markedPoi.planDayId) {
+      return visibleDayIds.has(markedPoi.planDayId);
+    }
+
+    const recommendedDayId = recommendedPoiMap.get(place.id);
+    // Recommended POIs are also controlled by day visibility.
+    if (recommendedDayId) {
+      return visibleDayIds.has(recommendedDayId);
+    }
+
+    // If a place is not part of an itinerary, show it if it's famous or its category is visible.
     if (famousPlaceIds.has(place.id)) {
       return true;
     }
@@ -1324,21 +1463,8 @@ export function MapPanel({
       return true;
     }
 
-    const markedPoi = findPoiByCoordinates(
-      pois,
-      place.latitude,
-      place.longitude
-    );
-    if (
-      markedPoi &&
-      markedPoi.planDayId &&
-      visibleDayIds.has(markedPoi.planDayId)
-    ) {
-      return true;
-    }
-
-    const recommendedDayId = recommendedPoiMap.get(place.id);
-    return !!recommendedDayId && visibleDayIds.has(recommendedDayId);
+    // Default to not showing.
+    return false;
   });
 
   return (
@@ -1503,6 +1629,7 @@ export function MapPanel({
             scheduledPoiData={scheduledPoiData}
             recommendedPoiLabelData={recommendedPoiLabelData}
             highlightedPlaceId={highlightedPlaceId}
+            zoomLevel={zoomLevel}
           />
         ))}
 
@@ -1698,14 +1825,24 @@ export function MapPanel({
           const routeColor = dayLayer ? dayLayer.color : '#FF00FF';
 
           return segments.map((segment, index) => (
-            <Polyline
-              key={`rec-${dayId}-segment-${index}`}
-              path={segment.path}
-              strokeWeight={5}
-              strokeColor={routeColor}
-              strokeOpacity={isVisible ? 0.7 : 0}
-              strokeStyle={'dashed'}
-            />
+            <React.Fragment key={`rec-${dayId}-segment-${index}`}>
+              <Polyline
+                path={segment.path}
+                strokeWeight={7}
+                strokeColor={'#000000'}
+                strokeOpacity={isVisible ? 0.7 : 0}
+                strokeStyle={'dashed'}
+                zIndex={1}
+              />
+              <Polyline
+                path={segment.path}
+                strokeWeight={5}
+                strokeColor={routeColor}
+                strokeOpacity={isVisible ? 0.7 : 0}
+                strokeStyle={'dashed'}
+                zIndex={1}
+              />
+            </React.Fragment>
           ));
         })}
 
