@@ -406,14 +406,24 @@ export function Workspace({
   // [수정] 모달에서 날짜를 선택하고 '확인'을 눌렀을 때 실행되는 함수
   const handleConfirmAdd = useCallback(
     (targetDayId: string) => {
-      if (!poiToAdd) return;
+      console.log('[Workspace] [handleConfirmAdd] Called with targetDayId:', targetDayId);
+      console.log('[Workspace] [handleConfirmAdd] Current poiToAdd:', poiToAdd);
+
+      if (!poiToAdd) {
+        console.warn('[Workspace] [handleConfirmAdd] poiToAdd is null, cannot add to itinerary.');
+        return;
+      }
 
       // addRecommendedPoisToDay 함수를 사용하여 POI를 추가하고 결과를 받음
+      console.log('[Workspace] [handleConfirmAdd] Calling addRecommendedPoisToDay with:', targetDayId, [poiToAdd]);
       const result = addRecommendedPoisToDay(targetDayId, [poiToAdd]);
 
       // 결과에 따라 사용자에게 알림
       if (!result.success && result.message) {
         toast.warning(result.message);
+        console.warn('[Workspace] [handleConfirmAdd] addRecommendedPoisToDay failed:', result.message);
+      } else if (result.success) {
+        console.log('[Workspace] [handleConfirmAdd] addRecommendedPoisToDay succeeded.');
       }
 
       // 모달 닫기

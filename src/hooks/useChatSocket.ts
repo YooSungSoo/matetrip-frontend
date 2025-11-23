@@ -134,7 +134,7 @@ export function useChatSocket(workspaceId: string) {
         // [추가] tool_data가 있고, 추천 장소 정보가 포함된 경우 파싱하여 추가
         if (payload.toolData && payload.toolData.length > 0) {
           const tool = payload.toolData[0];
-          // [수정] tool_output이 문자열이 아닌 객체 배열로 오므로 파싱 로직을 제거하고 직접 할당합니다.
+          
           if (
             (tool.tool_name === 'recommend_places_by_all_users' ||
               tool.tool_name === 'recommend_nearby_places' ||
@@ -142,6 +142,10 @@ export function useChatSocket(workspaceId: string) {
             Array.isArray(tool.tool_output)
           ) {
             newMessage.recommendedPlaces = tool.tool_output as AiPlace[];
+          }
+          // [추가] message가 비어있고 tool_output이 문자열이면, tool_output을 message로 사용
+          else if (!newMessage.message && typeof tool.tool_output === 'string') {
+            newMessage.message = tool.tool_output;
           }
         }
 
