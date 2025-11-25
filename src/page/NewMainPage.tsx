@@ -1026,7 +1026,7 @@ export function NewMainPage({
                         recommendationReason: undefined, // Hot Place doesn't have this
                       }} // recommendationReasonStyle="text-primary"
                       onAddPoiToItinerary={handleAddPoiToItinerary}
-                      onCardClick={(_poiLatLon) =>
+                      onCardClick={() =>
                         handleInspirationClick(place)
                       }
                       showAddButton={false} // '일정에 추가' 버튼을 숨깁니다.

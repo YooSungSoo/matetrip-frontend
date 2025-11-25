@@ -7,6 +7,7 @@ import {
   PlusCircle,
   MapPin,
   Bot,
+  FileText, // 상세보기 아이콘
 } from 'lucide-react';
 import { Button } from './ui/button';
 import type { Poi } from '../hooks/usePoiSocket';
@@ -15,12 +16,10 @@ import { Badge } from './ui/badge';
 import { VideoChat } from './VideoChat';
 import { type ChatMessage } from '../hooks/useChatSocket';
 import type { AiPlace } from '../hooks/useChatSocket';
-import { useAuthStore } from '../store/authStore'; // RecommendedPlaceCard 임포트 제거
+import { useAuthStore } from '../store/authStore';
 import { cn } from './ui/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { CategoryIcon } from './CategoryIcon'; // [신규] CategoryIcon 임포트
-// API_BASE_URL은 이제 authStore에서 avatar를 생성하므로 ChatPanel에서는 필요 없습니다.
-// import { API_BASE_URL } from '../api/client';
+import { CategoryIcon } from './CategoryIcon';
 
 interface Member {
   id: string;
@@ -38,22 +37,24 @@ interface ChatPanelProps {
   workspaceId: string;
   onAddPoiToItinerary: (poi: Poi) => void;
   onCardClick: (poi: Pick<Poi, 'latitude' | 'longitude'>) => void;
+  onShowDetails: (placeId: string) => void; // 상세보기 핸들러 추가
   setChatAiPlaces: (places: AiPlace[]) => void;
   chatAiPlaces: AiPlace[];
   activeMembers?: Member[];
 }
 
-// [신규] 채팅창 전용 AI 추천 장소 카드 컴포넌트
 function ChatRecommendedPlaceCard({
   place,
   onAddPoiToItinerary,
   onCardClick,
+  onShowDetails, // 상세보기 핸들러 추가
   workspaceId,
   currentUserId,
 }: {
   place: AiPlace;
   onAddPoiToItinerary: (poi: Poi) => void;
   onCardClick: (poi: Pick<Poi, 'latitude' | 'longitude'>) => void;
+  onShowDetails: (placeId: string) => void; // 상세보기 핸들러 추가
   workspaceId: string;
   currentUserId: string | undefined;
 }) {
@@ -74,6 +75,11 @@ function ChatRecommendedPlaceCard({
       isPersisted: false,
     };
     onAddPoiToItinerary(poi);
+  };
+
+  const handleShowDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onShowDetails(place.id);
   };
 
   return (
@@ -99,21 +105,31 @@ function ChatRecommendedPlaceCard({
           <p className="truncate">{place.address}</p>
         </div>
       </div>
-      <Button
-        size="icon"
-        variant="ghost"
-        className="w-8 h-8"
-        onClick={handleAddClick}
-      >
-        <PlusCircle className="w-5 h-5 text-primary" />
-      </Button>
+      <div className="flex flex-col gap-1">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="w-8 h-8"
+          onClick={handleShowDetailsClick}
+          aria-label="상세보기"
+        >
+          <FileText className="w-5 h-5 text-gray-600" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="w-8 h-8"
+          onClick={handleAddClick}
+          aria-label="일정에 추가"
+        >
+          <PlusCircle className="w-5 h-5 text-primary" />
+        </Button>
+      </div>
     </div>
   );
 }
 
-// [신규] AI 응답 대기 중 애니메이션 컴포넌트
 function AiLoadingIndicator() {
-  // 기존 useState와 useEffect를 제거하고 CSS 애니메이션으로 대체
   return (
     <>
       <div className="flex items-center gap-0.5 rounded-lg bg-gray-100 px-4 py-2 text-gray-600">
@@ -125,13 +141,13 @@ function AiLoadingIndicator() {
   );
 }
 
-// [신규] 각 채팅 메시지를 렌더링하는 별도의 컴포넌트
 const ChatMessageItem = memo(function ChatMessageItem({
   msg,
   currentUserId,
   activeMembers,
   onAddPoiToItinerary,
   onCardClick,
+  onShowDetails, // 상세보기 핸들러 추가
   workspaceId,
 }: {
   msg: ChatMessage;
@@ -139,6 +155,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
   activeMembers: Member[];
   onAddPoiToItinerary: (poi: Poi) => void;
   onCardClick: (poi: Pick<Poi, 'latitude' | 'longitude'>) => void;
+  onShowDetails: (placeId: string) => void; // 상세보기 핸들러 추가
   workspaceId: string;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -160,7 +177,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
   let showAvatar = false;
 
   if (isAi) {
-    avatarSrc = '/ai-avatar.png'; // AI 전용 아바타 이미지 경로
+    avatarSrc = '/ai-avatar.png';
     avatarAlt = 'AI';
     showAvatar = true;
   } else if (isMe && user?.avatar) {
@@ -196,8 +213,6 @@ const ChatMessageItem = memo(function ChatMessageItem({
       const restOfMessage = msg.message.substring(aiPrefix.length);
       return (
         <p className="text-base" style={{ wordBreak: 'break-word' }}>
-          {' '}
-          {/* text-sm -> text-base 변경 */}
           <span className="text-primary font-bold">{aiPrefix}</span>
           {restOfMessage}
         </p>
@@ -205,8 +220,6 @@ const ChatMessageItem = memo(function ChatMessageItem({
     }
     return (
       <p className="text-base" style={{ wordBreak: 'break-word' }}>
-        {' '}
-        {/* text-sm -> text-base 변경 */}
         {!isAiRecommendation && msg.message}
       </p>
     );
@@ -271,6 +284,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
                       place={place}
                       onAddPoiToItinerary={onAddPoiToItinerary}
                       onCardClick={onCardClick}
+                      onShowDetails={onShowDetails} // 상세보기 핸들러 전달
                       workspaceId={workspaceId}
                       currentUserId={currentUserId}
                     />
@@ -304,11 +318,11 @@ export const ChatPanel = memo(function ChatPanel({
   workspaceId,
   onAddPoiToItinerary,
   onCardClick,
+  onShowDetails, // 상세보기 핸들러 받기
   activeMembers = [],
 }: ChatPanelProps) {
   const [isVCCallActive, setIsVCCallActive] = useState(false);
   const [hasVCCallBeenInitiated, setHasVCCallBeenInitiated] = useState(false);
-  // const [isVCPanelExpanded, setIsVCPanelExpanded] = useState(true); // 제거
   const [currentMessage, setCurrentMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
@@ -347,7 +361,6 @@ export const ChatPanel = memo(function ChatPanel({
       <div className=" px-4 py-2 flex items-center justify-between flex-shrink-0 h-16 text-primary relative backdrop-blur-sm">
         <h1 className="text-xl font-bold truncate">채팅</h1>
         <div className="flex items-center gap-3">
-          {/* 접속 중인 멤버 아바타 */}
           {activeMembers.length > 0 && (
             <div className="flex items-center">
               {activeMembers.map((member, index) => (
@@ -394,42 +407,14 @@ export const ChatPanel = memo(function ChatPanel({
         </div>
       </div>
 
-      {isVCCallActive && ( // hasVCCallBeenInitiated 조건 제거
-        <div
-          className={cn(
-            'bg-gray-50 border-b transition-all duration-300'
-            // !isVCCallActive && 'invisible h-0 p-0 border-none' // isVCPanelExpanded 관련 조건 제거
-          )}
-        >
+      {isVCCallActive && (
+        <div className={cn('bg-gray-50 border-b transition-all duration-300')}>
           <div className="p-3">
-            {/* <div className="flex justify-between items-center mb-3"> // isVCPanelExpanded 관련 UI 제거
-              <h4 className="text-sm font-semibold">화상 통화</h4>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1 text-gray-600 hover:bg-gray-200"
-                onClick={() => setIsVCPanelExpanded((prev) => !prev)}
-              >
-                {isVCPanelExpanded ? '접기' : '펼치기'}
-                {isVCPanelExpanded ? (
-                  <ChevronDown className="w-4 h-4 mr-2" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 mr-2" />
-                )}
-              </Button>
-            </div> */}
-            <div
-              className={cn(
-                'transition-[height]'
-                // !isVCPanelExpanded && 'h-0 overflow-hidden' // isVCPanelExpanded 관련 조건 제거
-              )}
-            >
-              <VideoChat
-                workspaceId={workspaceId}
-                onClose={handleCloseVideoCall}
-                activeMembers={activeMembers}
-              />
-            </div>
+            <VideoChat
+              workspaceId={workspaceId}
+              onClose={handleCloseVideoCall}
+              activeMembers={activeMembers}
+            />
           </div>
         </div>
       )}
@@ -444,6 +429,7 @@ export const ChatPanel = memo(function ChatPanel({
               activeMembers={activeMembers}
               onAddPoiToItinerary={onAddPoiToItinerary}
               onCardClick={onCardClick}
+              onShowDetails={onShowDetails} // 상세보기 핸들러 전달
               workspaceId={workspaceId}
             />
           );

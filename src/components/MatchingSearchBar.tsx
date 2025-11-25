@@ -208,7 +208,7 @@ export function MatchingSearchBar({ onSearchSuccess }: MatchingSearchBarProps) {
               placeholder="여행지, 관심사, 여행 스타일로 검색..."
               value={locationQuery}
               onChange={(e) => setLocationQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-auto"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-blue-200 focus:ring-blue-500 h-auto"
             />
           </div>
         </form>
@@ -235,13 +235,13 @@ export function MatchingSearchBar({ onSearchSuccess }: MatchingSearchBarProps) {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-200"
                   />
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-200"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-200"
                   />
                 </div>
               </div>

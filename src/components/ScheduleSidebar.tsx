@@ -699,9 +699,21 @@ export function ScheduleSidebar({
     }
   };
 
+  const getWidthClass = () => {
+    switch (position) {
+      case 'docked':
+        return 'w-2/5'; // 40% 너비
+      case 'overlay':
+        return 'w-3/5'; // 60% 너비
+      case 'hidden':
+      default:
+        return 'w-3/5'; // 숨겨질 때도 원래 너비 유지
+    }
+  };
+
   return (
     <div
-      className={`absolute top-0 h-full w-3/5 bg-white border-l border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-20 rounded-lg overflow-hidden ${getPositionClasses()}`}
+      className={`absolute top-0 h-full bg-white border-l border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-20 rounded-lg overflow-hidden ${getPositionClasses()} ${getWidthClass()}`}
     >
       <div className="flex flex-col h-full">
         <div

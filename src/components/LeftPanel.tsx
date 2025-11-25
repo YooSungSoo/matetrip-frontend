@@ -179,12 +179,13 @@ interface LeftPanelProps {
   visibleDayIds: Set<string>;
   onDayVisibilityChange: (dayId: string, isVisible: boolean) => void;
   onRecommendedItineraryVisibilityChange: () => void;
-  hoveredPoiId: string | null; // onGenerateAiPlan을 선택적으로 변경
+  hoveredPoiId: string | null;
   onGenerateAiPlan?: () => void;
   messages: ChatMessage[];
   sendMessage: (message: string) => void;
   isChatConnected: boolean;
   onCardClick: (poi: any) => void;
+  onShowDetails: (placeId: string) => void; // 상세보기 핸들러 추가
   setChatAiPlaces: (places: AiPlace[]) => void;
   chatAiPlaces: AiPlace[];
   activeMembers?: ActiveMember[];
@@ -240,7 +241,7 @@ function RecommendedDayItem({
               onDayVisibilityChange(virtualPlanDayId, checked)
             }
           />
-          <h3 // [수정] text-sm -> text-base
+          <h3
             className="text-base font-bold truncate"
             style={{ color: layer.color }}
           >
@@ -297,6 +298,7 @@ function ChatSidebar({
   workspaceId,
   onAddPoiToItinerary,
   onCardClick,
+  onShowDetails, // 상세보기 핸들러 추가
   setChatAiPlaces,
   chatAiPlaces,
   activeMembers,
@@ -307,6 +309,7 @@ function ChatSidebar({
   workspaceId: string;
   onAddPoiToItinerary: (poi: Poi) => void;
   onCardClick: (poi: any) => void;
+  onShowDetails: (placeId: string) => void; // 상세보기 핸들러 추가
   setChatAiPlaces: (places: AiPlace[]) => void;
   chatAiPlaces: AiPlace[];
   activeMembers?: ActiveMember[];
@@ -319,6 +322,7 @@ function ChatSidebar({
       workspaceId={workspaceId}
       onAddPoiToItinerary={onAddPoiToItinerary}
       onCardClick={onCardClick}
+      onShowDetails={onShowDetails} // 상세보기 핸들러 전달
       setChatAiPlaces={setChatAiPlaces}
       chatAiPlaces={chatAiPlaces}
       activeMembers={activeMembers}
@@ -344,6 +348,7 @@ export function LeftPanel({
   sendMessage,
   isChatConnected,
   onCardClick,
+  onShowDetails, // 상세보기 핸들러 받기
   setChatAiPlaces,
   chatAiPlaces,
   activeMembers,
@@ -376,16 +381,12 @@ export function LeftPanel({
     }
   };
 
-  // [추가] 장소 캐시에서 모든 장소 정보를 가져옵니다.
   const placeCache = usePlaceStore((state) => state.placesById);
 
-  // [추가] 서버에서 받은 POI 목록에 캐시된 카테고리 정보를 병합합니다.
   const poisWithCategory = useMemo(() => {
     const allPois = [...Object.values(recommendedItinerary).flat()];
     return allPois.map((poi) => {
-      // POI에 categoryName이 이미 있으면 그대로 사용합니다.
       if (poi.categoryName) return poi;
-      // categoryName이 없으면, placeCache에서 placeId를 기준으로 찾아 채워줍니다.
       const cachedPlace = placeCache.get(poi.placeId);
       return cachedPlace ? { ...poi, categoryName: cachedPlace.category } : poi;
     });
@@ -421,7 +422,6 @@ export function LeftPanel({
     });
   }, [chatAiPlaces, placeCache]);
 
-  // [수정] 모든 Hook이 호출된 후에 조기 리턴을 수행합니다.
   if (!isOpen) {
     return null;
   }
@@ -496,6 +496,7 @@ export function LeftPanel({
           workspaceId={workspaceId}
           onAddPoiToItinerary={onAddRecommendedPoi}
           onCardClick={onCardClick}
+          onShowDetails={onShowDetails} // 상세보기 핸들러 전달
           setChatAiPlaces={setChatAiPlaces}
           chatAiPlaces={enrichedChatAiPlaces}
           activeMembers={activeMembers}
@@ -508,13 +509,10 @@ export function LeftPanel({
   return (
     <div className="relative h-full rounded-lg overflow-hidden w-full">
       <div className="flex h-full">
-        {' '}
-        {/* '내 일정'과 '채팅' 패널을 위한 flex 컨테이너 */}
         <div className="w-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out">
           <div className="flex-1 m-0 overflow-y-auto">{renderTabContent()}</div>
         </div>
       </div>
-      {/* AI 추천 패널 (Floating) */}
       <div
         className={`absolute top-0 left-0 h-full w-96 bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-10 ${
           isAiRecOpen

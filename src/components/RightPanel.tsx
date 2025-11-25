@@ -15,6 +15,7 @@ interface RightPanelProps {
   onCardClick: (poi: Pick<Poi, 'latitude' | 'longitude'>) => void;
   setAiRecommendedPlaces: (places: AiPlace[]) => void;
   aiRecommendedPlaces: AiPlace[];
+  onShowDetails: (placeId: string) => void;
 }
 
 export const RightPanel = memo(function RightPanel({
@@ -27,6 +28,7 @@ export const RightPanel = memo(function RightPanel({
   onCardClick,
   setAiRecommendedPlaces,
   aiRecommendedPlaces,
+  onShowDetails,
 }: RightPanelProps) {
   if (!isOpen) {
     return null;
@@ -51,6 +53,7 @@ export const RightPanel = memo(function RightPanel({
             onCardClick={onCardClick}
             setChatAiPlaces={setAiRecommendedPlaces}
             chatAiPlaces={aiRecommendedPlaces}
+            onShowDetails={onShowDetails}
           />
         </TabsContent>
       </Tabs>

@@ -159,7 +159,7 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
     (
       poiData: Omit<
         CreatePoiDto,
-        'workspaceId' | 'createdBy' | 'id' | 'planDayId'
+        'workspaceId' | 'createdBy' | 'id'
       >,
       options: { isOptimistic?: boolean; targetDayId?: string } = {
         isOptimistic: true,
@@ -171,20 +171,25 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
       }
 
       const tempId = `poi-${Date.now()}-${Math.random()}`;
-      const payload = { ...poiData, workspaceId, createdBy: user.userId };
+      // MARK 이벤트에는 planDayId를 포함하지 않음 (서버 버그 우회)
+      const payload: Omit<CreatePoiDto, 'planDayId'> = {
+        ...poiData,
+        workspaceId,
+        createdBy: user.userId,
+      };
 
       if (options.targetDayId) {
+        // 스케줄링 의도는 로컬에만 저장
         optimisticScheduleRef.current.set(tempId, {
           planDayId: options.targetDayId,
         });
       }
 
       if (options.isOptimistic) {
-        const isScheduled = !!options.targetDayId;
         const newPoi: Poi = {
           id: tempId,
-          status: isScheduled ? 'SCHEDULED' : 'MARKED',
-          planDayId: isScheduled ? options.targetDayId : undefined,
+          status: options.targetDayId ? 'SCHEDULED' : 'MARKED',
+          planDayId: options.targetDayId,
           sequence: 0,
           isPersisted: false,
           ...payload,
@@ -216,59 +221,61 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
 
     const handleMarked = (data: Poi & { tempId?: string }) => {
       const newPoiData = { ...data, isPersisted: true };
-      setPois((prevPois) => {
-        let tempPoi: Poi | undefined;
-        if (data.tempId) {
-          tempPoi = prevPois.find((p) => p.id === data.tempId);
-        }
-        if (!tempPoi) {
-          const COORDINATE_TOLERANCE = 0.000001;
-          tempPoi = prevPois.find(
-            (p) =>
-              !p.isPersisted &&
-              Math.abs(p.latitude - newPoiData.latitude) <
-                COORDINATE_TOLERANCE &&
-              Math.abs(p.longitude - newPoiData.longitude) <
-                COORDINATE_TOLERANCE
-          );
-        }
-
-        if (tempPoi) {
-          const tempId = tempPoi.id;
-          const optimisticData = optimisticScheduleRef.current.get(tempId);
-          if (optimisticData) {
-            optimisticScheduleRef.current.delete(tempId);
-          }
-          return prevPois.map((p) =>
-            p.id === tempId
-              ? {
-                  ...newPoiData,
-                  planDayId: optimisticData?.planDayId || p.planDayId,
-                  status: optimisticData?.planDayId
-                    ? 'SCHEDULED'
-                    : newPoiData.status,
-                  categoryName: p.categoryName,
-                }
-              : p
-          );
-        }
-
-        const existingPoiIndex = prevPois.findIndex(
-          (p) => p.id === newPoiData.id
+      let tempIdToUse = data.tempId;
+      let optimisticData: { planDayId: string } | undefined;
+    
+      // Find the temporary POI and its optimistic data
+      if (tempIdToUse) {
+        optimisticData = optimisticScheduleRef.current.get(tempIdToUse);
+      }
+    
+      // If we couldn't find the tempId or optimisticData, try to find the temp POI by its properties
+      if (!tempIdToUse || !optimisticData) {
+        const COORDINATE_TOLERANCE = 0.000001;
+        const tempPoi = poisRef.current.find(p => 
+          !p.isPersisted &&
+          p.placeId === newPoiData.placeId &&
+          Math.abs(p.latitude - newPoiData.latitude) < COORDINATE_TOLERANCE &&
+          Math.abs(p.longitude - newPoiData.longitude) < COORDINATE_TOLERANCE
         );
+        if (tempPoi) {
+          tempIdToUse = tempPoi.id; // We found the tempId!
+          optimisticData = optimisticScheduleRef.current.get(tempIdToUse);
+        }
+      }
+    
+      // Now, update the state
+      setPois((prevPois) => {
+        const tempPoiIndex = tempIdToUse ? prevPois.findIndex((p) => p.id === tempIdToUse) : -1;
+    
+        if (tempPoiIndex !== -1) {
+          // We found the temp POI, replace it.
+          const updatedPois = [...prevPois];
+          updatedPois[tempPoiIndex] = {
+            ...newPoiData,
+            // Preserve the optimistic state until ADD_SCHEDULE is processed by everyone
+            status: prevPois[tempPoiIndex].status,
+            planDayId: prevPois[tempPoiIndex].planDayId,
+          };
+          return updatedPois;
+        }
+        
+        // Fallback for updates or new POIs from other users
+        const existingPoiIndex = prevPois.findIndex((p) => p.id === newPoiData.id);
         if (existingPoiIndex > -1) {
-          return prevPois.map((p, index) =>
-            index === existingPoiIndex
-              ? {
-                  ...p,
-                  ...newPoiData,
-                  categoryName: p.categoryName || newPoiData.categoryName,
-                }
-              : p
-          );
+          const updatedPois = [...prevPois];
+          updatedPois[existingPoiIndex] = { ...updatedPois[existingPoiIndex], ...newPoiData };
+          return updatedPois;
         }
         return [...prevPois, newPoiData];
       });
+    
+      // And finally, trigger the schedule event if we found an optimistic intent
+      if (optimisticData && tempIdToUse) {
+        console.log(`[usePoiSocket] Optimistic schedule found for POI ${newPoiData.id}. Emitting ADD_SCHEDULE.`);
+        addSchedule(newPoiData.id, optimisticData.planDayId);
+        optimisticScheduleRef.current.delete(tempIdToUse);
+      }
     };
 
     const handleUnmarked = (data: string | { poiId: string }) => {
@@ -279,27 +286,33 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
     };
 
     const handleAddSchedule = (data: { poiId: string; planDayId: string }) => {
-      console.log('[usePoiSocket] [Event] ADD_SCHEDULE 수신:', data);
-      const poiExists = poisRef.current.some((p) => p.id === data.poiId);
-
-      if (poiExists) {
-        setPois((currentPois) => {
-          console.log(`[usePoiSocket] [handleAddSchedule] Found POI ${data.poiId}. Updating status to SCHEDULED.`);
-          return currentPois.map((p) =>
+      const applyUpdate = () => {
+        setPois((currentPois) =>
+          currentPois.map((p) =>
             p.id === data.poiId
               ? {
                   ...p,
                   planDayId: data.planDayId,
                   status: 'SCHEDULED',
-                  categoryName: p.categoryName,
                 }
               : p
-          );
-        });
-      } else {
-        console.warn(`[usePoiSocket] [handleAddSchedule] WARNING: POI with id ${data.poiId} not found. Re-joining room to force SYNC.`);
-        socket.emit(PoiSocketEvent.JOIN, { workspaceId });
-      }
+          )
+        );
+      };
+
+      const checkAndApply = (retries = 5) => {
+        const poiExists = poisRef.current.some((p) => p.id === data.poiId);
+        if (poiExists) {
+          applyUpdate();
+        } else if (retries > 0) {
+          setTimeout(() => checkAndApply(retries - 1), 150);
+        } else {
+          console.error(`[usePoiSocket] FAILED to apply ADD_SCHEDULE for POI ${data.poiId}. Not found. Forcing sync.`);
+          socket.emit(PoiSocketEvent.JOIN, { workspaceId });
+        }
+      };
+
+      checkAndApply();
     };
 
     const handleRemoveSchedule = (data: {
@@ -397,7 +410,7 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
       socket.off(PoiSocketEvent['place:focused'], handlePlaceFocused);
       socket.disconnect();
     };
-  }, [workspaceId, user?.userId, isAuthLoading]);
+  }, [workspaceId, user?.userId, isAuthLoading, addSchedule]);
 
   const unmarkPoi = useCallback(
     (poiId: number | string) => {
@@ -618,10 +631,7 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
         pois.map((p) => `${p.latitude.toFixed(5)},${p.longitude.toFixed(5)}`)
       );
 
-      const poisToCreate: {
-        tempId: string;
-        payload: Omit<CreatePoiDto, 'planDayId'>;
-      }[] = [];
+      const poisToCreate: { tempId: string; payload: Omit<CreatePoiDto, 'planDayId'> }[] = [];
       const newPoisForState: Poi[] = [];
       const skippedPois: string[] = [];
 

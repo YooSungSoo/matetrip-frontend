@@ -31,7 +31,8 @@ export function RecommendedPlaceCard({
     onCardClick({ latitude, longitude });
   };
 
-  const handleAddClick = () => {
+  const handleAddClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onAddPoiToItinerary({
       id,
       placeName: title,

@@ -171,10 +171,7 @@ export function PlaceRecommendationSection({
                 recommendationReason: place.recommendationReason?.message, // Map message
               }}
               onAddPoiToItinerary={handleAddPoiToItinerary}
-              onCardClick={(_poiLatLon) => { // poiLatLon을 _poiLatLon으로 변경
-                // When RecommendedPlaceCard is clicked, it calls this with lat/lng.
-                // We need to call the parent's onPlaceClick which expects placeId and full PlaceDto.
-                // We already have `place.id` and the full `place` object from the map loop.
+              onCardClick={() => {
                 handlePlaceClick(place.id, place);
               }}
               showAddButton={false} // '일정에 추가' 버튼을 숨깁니다.
