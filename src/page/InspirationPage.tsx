@@ -53,11 +53,11 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
 
   // 백엔드 응답을 프론트엔드 타입으로 변환
   const transformResponse = (
-    data: GetPlacesResDto[],
+    data: any[],
     startIndex: number
   ): Place[] => {
     return data.map((item, index) => ({
-      id: item.id,
+      id: item.place_id || item.addplace_id || item.id,
       title: item.title,
       address: item.address,
       imageUrl: item.image_url,
@@ -81,9 +81,11 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
       }
 
       const currentPage = isNewSearch ? 1 : page + 1;
+
+      // 검색 API는 페이지네이션을 지원하지 않으므로 word 파라미터만 전달
       const endpoint = query ? '/places/search/detail' : '/places/popular';
       const params = query
-        ? { word: query, page: currentPage, limit: ITEMS_PER_PAGE }
+        ? { word: query }
         : { page: currentPage, limit: ITEMS_PER_PAGE };
 
       try {
@@ -91,23 +93,42 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
           params,
         });
 
+        console.log('=== Backend Response Debug ===');
+        console.log('Endpoint:', endpoint);
+        console.log('Full response:', response.data);
+        console.log('First item:', response.data[0]);
+        console.log('First item id:', response.data[0]?.id);
+        console.log('============================');
+
         const transformedData = transformResponse(
           response.data,
           isNewSearch ? 0 : places.length
         );
 
-        setPlaces((prev) =>
-          isNewSearch ? transformedData : [...prev, ...transformedData]
-        );
+        console.log('=== Transformed Data Debug ===');
+        console.log('Transformed data:', transformedData);
+        console.log('First transformed item:', transformedData[0]);
+        console.log('First transformed item id:', transformedData[0]?.id);
+        console.log('==============================');
 
-        if (isNewSearch) {
-          setPage(1);
+        // 검색의 경우 전체 결과를 한번에 받으므로 기존 데이터를 교체
+        if (query) {
+          setPlaces(transformedData);
+          setHasMore(false); // 검색 결과는 한번에 모두 로드
         } else {
-          setPage(currentPage);
-        }
+          setPlaces((prev) =>
+            isNewSearch ? transformedData : [...prev, ...transformedData]
+          );
 
-        if (response.data.length < ITEMS_PER_PAGE) {
-          setHasMore(false);
+          if (isNewSearch) {
+            setPage(1);
+          } else {
+            setPage(currentPage);
+          }
+
+          if (response.data.length < ITEMS_PER_PAGE) {
+            setHasMore(false);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch places:', error);
@@ -169,6 +190,8 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
         address: place.address,
         summary: place.summary,
         imageUrl: place.imageUrl,
+        latitude: place.latitude,
+        longitude: place.longitude,
       },
     });
   };

@@ -155,19 +155,28 @@ export function InspirationCard({
     >
       <div className="flex flex-col items-start w-full">
         <div className="flex flex-col gap-3 items-start justify-end w-full">
-          <div
-            className="h-[252px] w-full bg-cover bg-center relative overflow-hidden group" // group 클래스 추가
-            style={{
-              backgroundColor:
-                !actualImageUrl || isImageLoading ? '#E5E7EB' : undefined,
-              backgroundImage:
-                actualImageUrl && !isImageLoading
-                  ? `url(${actualImageUrl})`
-                  : undefined,
-            }}
-          >
+          <div className="h-[252px] w-full relative overflow-hidden group">
+            {/* Lazy Loading 적용된 이미지 */}
+            {actualImageUrl && !isImageLoading ? (
+              <img
+                src={actualImageUrl}
+                alt={title}
+                loading="lazy"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                {isImageLoading && (
+                  <div className="animate-pulse text-gray-400">로딩 중...</div>
+                )}
+              </div>
+            )}
+
             {rank && <MedalIcon rank={rank} />} {/* 메달 아이콘 표시 */}
-            
+
             {renderRecommendationReason} {/* 추천 이유 렌더링 */}
 
             {/* Hover 시 나타나는 dimmed 배경 및 summary */}
