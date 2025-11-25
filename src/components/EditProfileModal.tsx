@@ -395,9 +395,10 @@ export function EditProfileModal({
   //   }
   // };
   const validateStyleCount = (count: number) => {
-    if (count === 0) {
-      setStyleError('여행 스타일을 최소 1개 선택해주세요.');
-    } else if (count > 3) {
+    // if (count === 0) {
+    //   setStyleError('여행 스타일을 최소 1개 선택해주세요.');
+    // }
+    if (count > 3) {
       setStyleError('여행 스타일을 3개 이하로 선택해주세요');
     } else {
       setStyleError('');
@@ -478,10 +479,10 @@ export function EditProfileModal({
   //👀 save API  호출
   const handleSaveProfile = async () => {
     if (!user || isSaving) return;
-    if (selectedTravelStyles.length === 0) {
-      setStyleError('여행 스타일을 최소 1개 선택해주세요.');
-      return;
-    }
+    // if (selectedTravelStyles.length === 0) {
+    //   setStyleError('여행 스타일을 최소 1개 선택해주세요.');
+    //   return;
+    // }
     if (selectedTravelStyles.length > 3) {
       setStyleError('여행 스타일을 3개 이하로 선택해주세요.');
       return;

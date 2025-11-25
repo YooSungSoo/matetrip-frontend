@@ -270,11 +270,11 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
       const newSet = new Set(prev.travelStyles);
       if (newSet.has(style)) {
         newSet.delete(style);
-        if (newSet.size === 0) {
-          setStyleError('여행 스타일을 최소 1개 선택해주세요.');
-        } else {
-          setStyleError('');
-        }
+        // if (newSet.size === 0) {
+        //   setStyleError('여행 스타일을 최소 1개 선택해주세요.');
+        // } else {
+        //   setStyleError('');
+        // }
       } else {
         if (newSet.size >= 3) {
           setStyleError('여행 스타일은 3개 이하로 선택해주세요.');
@@ -381,10 +381,10 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
       return;
     }
     if (step === 2) {
-      if (formData.travelStyles.size === 0) {
-        setStyleError('여행 스타일을 최소 1개 선택해주세요.');
-        return;
-      }
+      // if (formData.travelStyles.size === 0) {
+      //   setStyleError('여행 스타일을 최소 1개 선택해주세요.');
+      //   return;
+      // }
       if (formData.travelStyles.size > 3) {
         setStyleError('여행 스타일은 3개 이하로 선택해주세요.');
         setTimeout(() => setStyleError(''), 3000);
