@@ -223,26 +223,26 @@ const ChatMessageItem = memo(function ChatMessageItem({
 
     if (msg.role === 'ai') {
       return (
-        <div className="prose prose-sm max-w-none text-gray-900">
+        <div className="prose prose-lg max-w-none text-gray-900">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              h1: ({ children }) => <h1 className="text-2xl font-bold mt-4 mb-2">{children}</h1>,
-              h2: ({ children }) => <h2 className="text-xl font-bold mt-3 mb-2">{children}</h2>,
-              h3: ({ children }) => <h3 className="text-lg font-bold mt-2 mb-1">{children}</h3>,
-              p: ({ children }) => <p className="text-base leading-relaxed mb-2">{children}</p>,
-              ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-              li: ({ children }) => <li className="text-base">{children}</li>,
+              h1: ({ children }) => <h1 className="text-4xl font-bold mt-6 mb-3">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-3xl font-bold mt-5 mb-3">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-2xl font-bold mt-4 mb-2">{children}</h3>,
+              p: ({ children }) => <p className="text-lg leading-relaxed mb-3">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-2">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-2">{children}</ol>,
+              li: ({ children }) => <li className="text-lg">{children}</li>,
               strong: ({ children }) => <strong className="font-bold">{children}</strong>,
               em: ({ children }) => <em className="italic">{children}</em>,
-              code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
+              code: ({ children }) => <code className="bg-gray-200 px-2 py-1 rounded text-base font-mono">{children}</code>,
               blockquote: ({ children }) => (
-                <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-2">
+                <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-3">
                   {children}
                 </blockquote>
               ),
-              hr: () => <hr className="my-3 border-gray-300" />,
+              hr: () => <hr className="my-4 border-gray-300" />,
             }}
           >
             {msg.message}
@@ -252,7 +252,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
     }
 
     return (
-      <p className="text-base" style={{ wordBreak: 'break-word' }}>
+      <p className="text-2xl" style={{ wordBreak: 'break-word' }}>
         {msg.message}
       </p>
     );
