@@ -143,19 +143,43 @@ export function useChatSocket(workspaceId: string) {
         // [추가] tool_data가 있고, 추천 장소 정보가 포함된 경우 파싱하여 추가
         if (payload.toolData && payload.toolData.length > 0) {
           const tool = payload.toolData[0];
-          
-          if (
-            (tool.tool_name === 'recommend_places_by_all_users' ||
-              tool.tool_name === 'recommend_nearby_places' ||
-              tool.tool_name === 'recommend_popular_places_in_region') &&
-            Array.isArray(tool.tool_output)
-          ) {
-            newMessage.recommendedPlaces = tool.tool_output.map((place: any) => ({
-              ...place,
-              imageUrl: place.image_url,
-            })) as AiPlace[];
-          }
-          else if (!newMessage.message && typeof tool.tool_output === 'string') {
+
+          const isRecommendationTool =
+            tool.tool_name === 'recommend_places_by_all_users' ||
+            tool.tool_name === 'recommend_nearby_places' ||
+            tool.tool_name === 'recommend_popular_places_in_region';
+
+          if (isRecommendationTool) {
+            let placesArray: any[] = [];
+
+            // tool_output이 배열인 경우 (기존 형식)
+            if (Array.isArray(tool.tool_output)) {
+              placesArray = tool.tool_output;
+            }
+            // tool_output이 객체이고 data.places 구조인 경우 (새 형식)
+            else if (
+              tool.tool_output &&
+              typeof tool.tool_output === 'object' &&
+              tool.tool_output.data &&
+              Array.isArray(tool.tool_output.data.places)
+            ) {
+              placesArray = tool.tool_output.data.places;
+            }
+
+            if (placesArray.length > 0) {
+              newMessage.recommendedPlaces = placesArray.map((place: any) => ({
+                id: place.id,
+                title: place.title,
+                address: place.address,
+                summary: place.summary,
+                imageUrl: place.image_url, // image_url를 imageUrl로 변환
+                longitude: place.longitude,
+                latitude: place.latitude,
+                category: place.category,
+                recommendationReason: place.recommendationReason,
+              })) as AiPlace[];
+            }
+          } else if (!newMessage.message && typeof tool.tool_output === 'string') {
             newMessage.message = tool.tool_output;
           }
         }
